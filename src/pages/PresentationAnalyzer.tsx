@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -13,10 +13,35 @@ import { Presentation, Slide } from '@/types/presentation';
 import { Download, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const PresentationAnalyzer = () => {
-  const [presentation, setPresentation] = useState<Presentation>(mockPresentation);
+  const [presentation, setPresentation] = useState<Presentation>({
+    ...mockPresentation,
+    id: '1',
+    title: '',
+    author: 'You',
+    originalFileName: '',
+    uploadDate: new Date(),
+    isAnalysisComplete: true,
+    slides: mockPresentation.slides // We'll keep the mock slides for demonstration
+  });
   const [currentIndex, setCurrentIndex] = useState(0);
   const { toast } = useToast();
   const navigate = useNavigate();
+  
+  // Load file information from sessionStorage
+  useEffect(() => {
+    const fileName = sessionStorage.getItem('uploadedFileName');
+    const fileSize = sessionStorage.getItem('uploadedFileSize');
+    const fileDate = sessionStorage.getItem('uploadedFileDate');
+    
+    if (fileName) {
+      setPresentation(prev => ({
+        ...prev,
+        title: fileName.split('.')[0] || 'Untitled Presentation',
+        originalFileName: fileName,
+        uploadDate: fileDate ? new Date(fileDate) : new Date()
+      }));
+    }
+  }, []);
   
   const completedCount = presentation.slides.filter(slide => 
     slide.status === 'approved' || slide.status === 'rejected' || slide.status === 'modified'

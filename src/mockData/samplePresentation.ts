@@ -1,6 +1,8 @@
 
 import { Presentation, Reference } from '@/types/presentation';
 
+// NOTE: This mock data is only used for demonstration purposes.
+// In a real application, this would be replaced with actual data from the uploaded presentation.
 export const mockPresentation: Presentation = {
   id: '1',
   title: 'Type 2 Diabetes Management',
