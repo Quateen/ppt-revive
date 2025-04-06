@@ -20,28 +20,38 @@ const Index = () => {
     setUploadedFile(file);
   };
   
-  const handleAnalyze = () => {
+  const handleAnalyze = async () => {
     if (!uploadedFile) return;
 
     // In a real app, this would analyze the presentation
     setAnalyzing(true);
-    
-    // Generate presentation data from the file
-    const presentationData = createPresentationFromFile(uploadedFile);
     
     toast({
       title: "Analysis in progress",
       description: "We're analyzing your presentation content. This may take a moment..."
     });
     
-    // Store the presentation data in sessionStorage
-    sessionStorage.setItem('presentationData', JSON.stringify(presentationData));
-    
-    // Simulate analysis delay
-    setTimeout(() => {
+    try {
+      // Generate presentation data from the file
+      const presentationData = await createPresentationFromFile(uploadedFile);
+      
+      // Store the presentation data in sessionStorage
+      sessionStorage.setItem('presentationData', JSON.stringify(presentationData));
+      
+      // Navigate to analyzer after a short delay
+      setTimeout(() => {
+        setAnalyzing(false);
+        navigate('/analyzer');
+      }, 1500);
+    } catch (error) {
+      console.error("Error processing presentation:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to process the presentation. Please try again with a different file."
+      });
       setAnalyzing(false);
-      navigate('/analyzer');
-    }, 3000);
+    }
   };
   
   return (

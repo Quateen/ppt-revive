@@ -19,13 +19,13 @@ const FileUploader: React.FC<FileUploaderProps> = ({ onFileUploaded }) => {
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const uploadedFile = acceptedFiles[0];
     
-    // Check if file is a PowerPoint file
-    const isPowerPoint = /\.(ppt|pptx)$/i.test(uploadedFile.name);
+    // Check if file is a PowerPoint file or Excel (for pptx files)
+    const isPowerPoint = /\.(ppt|pptx|pot|potx|pps|ppsx|pptm|potm|ppsm)$/i.test(uploadedFile.name);
     if (!isPowerPoint) {
       toast({
         variant: "destructive",
         title: "Invalid file type",
-        description: "Please upload a PowerPoint presentation (.ppt or .pptx)"
+        description: "Please upload a PowerPoint presentation file"
       });
       return;
     }
@@ -37,8 +37,13 @@ const FileUploader: React.FC<FileUploaderProps> = ({ onFileUploaded }) => {
   const { getRootProps, getInputProps, isDragActive } = useDropzone({ 
     onDrop,
     accept: {
-      'application/vnd.ms-powerpoint': ['.ppt'],
-      'application/vnd.openxmlformats-officedocument.presentationml.presentation': ['.pptx']
+      'application/vnd.ms-powerpoint': ['.ppt', '.pot', '.pps'],
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation': ['.pptx'],
+      'application/vnd.openxmlformats-officedocument.presentationml.template': ['.potx'],
+      'application/vnd.openxmlformats-officedocument.presentationml.slideshow': ['.ppsx'],
+      'application/vnd.ms-powerpoint.presentation.macroEnabled.12': ['.pptm'],
+      'application/vnd.ms-powerpoint.template.macroEnabled.12': ['.potm'],
+      'application/vnd.ms-powerpoint.slideshow.macroEnabled.12': ['.ppsm']
     },
     maxFiles: 1
   });
@@ -85,7 +90,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({ onFileUploaded }) => {
           </div>
           <p className="mt-4 text-lg font-medium text-gray-700">Drag and drop your presentation</p>
           <p className="text-sm text-gray-500 mt-1">or click to browse files</p>
-          <p className="text-xs text-gray-400 mt-3">.ppt or .pptx files only</p>
+          <p className="text-xs text-gray-400 mt-3">PowerPoint files (.ppt, .pptx, etc.)</p>
         </div>
       ) : (
         <div className="border border-gray-200 rounded-lg p-4">
