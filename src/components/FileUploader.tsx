@@ -61,7 +61,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({ onFileUploaded }) => {
           onFileUploaded(uploadedFile);
           toast({
             title: "Upload complete",
-            description: `${uploadedFile.name} has been uploaded successfully.`
+            description: `${uploadedFile.name} has been uploaded and is being processed.`
           });
           return 100;
         }
@@ -80,8 +80,8 @@ const FileUploader: React.FC<FileUploaderProps> = ({ onFileUploaded }) => {
       {!file ? (
         <div 
           {...getRootProps()} 
-          className={`file-drop-area h-64 flex flex-col items-center justify-center p-6 ${
-            isDragActive ? 'drag-active' : ''
+          className={`file-drop-area h-64 flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-lg ${
+            isDragActive ? 'border-medical-600 bg-medical-50' : 'border-gray-300'
           }`}
         >
           <input {...getInputProps()} />

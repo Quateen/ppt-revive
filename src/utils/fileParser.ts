@@ -2,8 +2,8 @@
 import { Presentation, Slide } from '@/types/presentation';
 import * as XLSX from 'xlsx';
 
-// Extract text content from PowerPoint files
-export const extractTextFromPowerPoint = async (file: File): Promise<string[]> => {
+// Legacy parser using XLSX (as fallback)
+const extractTextWithXLSX = async (file: File): Promise<string[]> => {
   try {
     // Read the file as an ArrayBuffer
     const buffer = await file.arrayBuffer();
@@ -26,14 +26,66 @@ export const extractTextFromPowerPoint = async (file: File): Promise<string[]> =
     
     // If we couldn't extract slides, return a default message
     if (slideContents.length === 0) {
-      console.log("Could not extract text from PowerPoint file");
+      console.log("Could not extract text from PowerPoint file with XLSX");
       return ["No text content could be extracted from this PowerPoint file"];
     }
     
     return slideContents;
   } catch (error) {
+    console.error("Error parsing PowerPoint file with XLSX:", error);
+    throw error;
+  }
+};
+
+// Extract text content from PowerPoint files using Cloudmersive API
+export const extractTextFromPowerPoint = async (file: File): Promise<string[]> => {
+  try {
+    // Check if file is a PowerPoint file
+    if (!file.name.match(/\.(ppt|pptx|pot|potx|pps|ppsx|pptm|potm|ppsm)$/i)) {
+      throw new Error("File is not a PowerPoint file");
+    }
+    
+    // Try to use Cloudmersive API first
+    try {
+      const formData = new FormData();
+      formData.append("inputFile", file);
+      
+      const response = await fetch("https://api.cloudmersive.com/convert/pptx/to/txt", {
+        method: "POST",
+        headers: {
+          "Apikey": "YOUR_CLOUDMERSIVE_API_KEY" // Replace with actual API key or preferably get from environment
+        },
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Cloudmersive API error: ${response.statusText}`);
+      }
+      
+      const textContent = await response.text();
+      
+      // Split the content by slides (this is a simplification, the actual response format may vary)
+      // Cloudmersive typically returns text with slide markers
+      const slideRegex = /===== Slide \d+ =====\n/g;
+      const slides = textContent.split(slideRegex).filter(text => text.trim().length > 0);
+      
+      if (slides.length > 0) {
+        return slides;
+      } else {
+        throw new Error("No slides extracted from Cloudmersive response");
+      }
+    } catch (cloudmersiveError) {
+      console.error("Cloudmersive API error:", cloudmersiveError);
+      console.log("Falling back to XLSX parser...");
+      
+      // Fall back to XLSX parser if Cloudmersive fails
+      return await extractTextWithXLSX(file);
+    }
+  } catch (error) {
     console.error("Error parsing PowerPoint file:", error);
-    return ["Error parsing PowerPoint file"];
+    
+    // Last resort fallback
+    return ["Error parsing PowerPoint file. Please try a different file format."];
   }
 };
 
