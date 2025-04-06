@@ -5,7 +5,7 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Check, Download, FilePresentation, Home } from 'lucide-react';
+import { Check, Download, FileType, Home } from 'lucide-react';
 
 const DownloadPage = () => {
   const [downloading, setDownloading] = useState(true);
@@ -28,7 +28,7 @@ const DownloadPage = () => {
           <div className="mb-6">
             {downloading ? (
               <div className="w-16 h-16 mx-auto bg-medical-100 rounded-full flex items-center justify-center">
-                <FilePresentation className="h-8 w-8 text-medical-600 animate-pulse-slow" />
+                <FileType className="h-8 w-8 text-medical-600 animate-pulse-slow" />
               </div>
             ) : (
               <div className="w-16 h-16 mx-auto bg-green-100 rounded-full flex items-center justify-center">
@@ -53,7 +53,7 @@ const DownloadPage = () => {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center">
                     <div className="bg-medical-100 p-2 rounded-md">
-                      <FilePresentation className="h-6 w-6 text-medical-600" />
+                      <FileType className="h-6 w-6 text-medical-600" />
                     </div>
                     <div className="ml-3 text-left">
                       <p className="font-medium text-gray-900">Type 2 Diabetes Management (Updated)</p>
