@@ -11,14 +11,18 @@ import { useToast } from '@/components/ui/use-toast';
 const Index = () => {
   const [fileUploaded, setFileUploaded] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
   
   const handleFileUploaded = (file: File) => {
     setFileUploaded(true);
+    setUploadedFile(file);
   };
   
   const handleAnalyze = () => {
+    if (!uploadedFile) return;
+
     // In a real app, this would analyze the presentation
     setAnalyzing(true);
     
@@ -28,8 +32,16 @@ const Index = () => {
       description: "We're analyzing your presentation content. This may take a moment..."
     });
     
+    // In a real implementation, you would process the file here
+    // For now, we'll just simulate a delay and navigate to the analyzer page
     setTimeout(() => {
       setAnalyzing(false);
+      
+      // Store the file name in sessionStorage so we can display it in the analyzer page
+      sessionStorage.setItem('uploadedFileName', uploadedFile.name);
+      sessionStorage.setItem('uploadedFileSize', uploadedFile.size.toString());
+      sessionStorage.setItem('uploadedFileDate', new Date().toISOString());
+      
       navigate('/analyzer');
     }, 3000);
   };

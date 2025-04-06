@@ -1,7 +1,7 @@
 
 import React, { useCallback, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { Upload, X, FileType, File } from 'lucide-react';
+import { Upload, X, FileType } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/components/ui/use-toast';
@@ -52,6 +52,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({ onFileUploaded }) => {
         if (prev >= 100) {
           clearInterval(interval);
           setUploading(false);
+          // Pass the actual file to the parent component
           onFileUploaded(uploadedFile);
           toast({
             title: "Upload complete",
