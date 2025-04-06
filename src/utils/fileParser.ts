@@ -63,17 +63,54 @@ export const extractTextFromPowerPoint = async (file: File): Promise<string[]> =
       }
       
       const textContent = await response.text();
+      console.log("Cloudmersive API response:", textContent);
       
-      // Split the content by slides (this is a simplification, the actual response format may vary)
-      // Cloudmersive typically returns text with slide markers
-      const slideRegex = /===== Slide \d+ =====\n/g;
-      const slides = textContent.split(slideRegex).filter(text => text.trim().length > 0);
+      // Enhanced slide parsing - look for the slide markers in Cloudmersive response
+      const slideRegex = /===== Slide (\d+) =====\n/g;
+      let match;
+      let lastIndex = 0;
+      const slides: string[] = [];
       
-      if (slides.length > 0) {
-        return slides;
-      } else {
-        throw new Error("No slides extracted from Cloudmersive response");
+      // Find all slide markers and extract content between them
+      while ((match = slideRegex.exec(textContent)) !== null) {
+        const currentIndex = match.index;
+        
+        // If this is not the first match, extract the content between the previous match and this one
+        if (lastIndex > 0) {
+          const slideContent = textContent.substring(lastIndex, currentIndex).trim();
+          if (slideContent) {
+            slides.push(slideContent);
+          }
+        }
+        
+        // Update lastIndex to the end of this match
+        lastIndex = currentIndex + match[0].length;
       }
+      
+      // Don't forget the last slide (after the last marker)
+      if (lastIndex > 0 && lastIndex < textContent.length) {
+        const slideContent = textContent.substring(lastIndex).trim();
+        if (slideContent) {
+          slides.push(slideContent);
+        }
+      }
+      
+      // If we couldn't extract slides with markers but have content, try splitting by newlines
+      if (slides.length === 0 && textContent.trim()) {
+        // Alternative parsing: Split by multiple newlines as a slide separator
+        const alternativeSlides = textContent.split(/\n{3,}/g)
+          .filter(text => text.trim().length > 0);
+        
+        if (alternativeSlides.length > 0) {
+          return alternativeSlides;
+        } else {
+          // Last resort: treat the whole content as a single slide
+          return [textContent.trim()];
+        }
+      }
+      
+      return slides.length > 0 ? slides : [textContent.trim()];
+      
     } catch (cloudmersiveError) {
       console.error("Cloudmersive API error:", cloudmersiveError);
       console.log("Falling back to XLSX parser...");
@@ -96,6 +133,7 @@ export const generateSlidesFromFile = async (file: File): Promise<Slide[]> => {
   try {
     // Extract text content from the PowerPoint file
     const slideContents = await extractTextFromPowerPoint(file);
+    console.log(`Extracted ${slideContents.length} slides from PowerPoint file`);
     
     // Create slides based on extracted content
     slideContents.forEach((content, index) => {
@@ -163,3 +201,4 @@ export const createPresentationFromFile = async (file: File): Promise<Presentati
     slides: slides
   };
 };
+
