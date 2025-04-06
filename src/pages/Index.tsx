@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
@@ -7,6 +6,7 @@ import FileUploader from '@/components/FileUploader';
 import { Button } from '@/components/ui/button';
 import { CircleHelp, FileText, Search, RotateCcw, FileCheck } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
+import { createPresentationFromFile } from '@/utils/fileParser';
 
 const Index = () => {
   const [fileUploaded, setFileUploaded] = useState(false);
@@ -26,22 +26,20 @@ const Index = () => {
     // In a real app, this would analyze the presentation
     setAnalyzing(true);
     
-    // Simulate analysis
+    // Generate presentation data from the file
+    const presentationData = createPresentationFromFile(uploadedFile);
+    
     toast({
       title: "Analysis in progress",
       description: "We're analyzing your presentation content. This may take a moment..."
     });
     
-    // In a real implementation, you would process the file here
-    // For now, we'll just simulate a delay and navigate to the analyzer page
+    // Store the presentation data in sessionStorage
+    sessionStorage.setItem('presentationData', JSON.stringify(presentationData));
+    
+    // Simulate analysis delay
     setTimeout(() => {
       setAnalyzing(false);
-      
-      // Store the file name in sessionStorage so we can display it in the analyzer page
-      sessionStorage.setItem('uploadedFileName', uploadedFile.name);
-      sessionStorage.setItem('uploadedFileSize', uploadedFile.size.toString());
-      sessionStorage.setItem('uploadedFileDate', new Date().toISOString());
-      
       navigate('/analyzer');
     }, 3000);
   };

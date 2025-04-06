@@ -8,40 +8,64 @@ import ReferencesList from '@/components/ReferencesList';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/components/ui/use-toast';
-import { mockPresentation, mockReferences } from '@/mockData/samplePresentation';
+import { mockReferences } from '@/mockData/samplePresentation';
 import { Presentation, Slide } from '@/types/presentation';
 import { Download, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const PresentationAnalyzer = () => {
-  const [presentation, setPresentation] = useState<Presentation>({
-    ...mockPresentation,
-    id: '1',
-    title: '',
-    author: 'You',
-    originalFileName: '',
-    uploadDate: new Date(),
-    isAnalysisComplete: true,
-    slides: mockPresentation.slides // We'll keep the mock slides for demonstration
-  });
+  const [presentation, setPresentation] = useState<Presentation | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const { toast } = useToast();
   const navigate = useNavigate();
   
-  // Load file information from sessionStorage
+  // Load presentation data from sessionStorage
   useEffect(() => {
-    const fileName = sessionStorage.getItem('uploadedFileName');
-    const fileSize = sessionStorage.getItem('uploadedFileSize');
-    const fileDate = sessionStorage.getItem('uploadedFileDate');
+    const storedData = sessionStorage.getItem('presentationData');
     
-    if (fileName) {
-      setPresentation(prev => ({
-        ...prev,
-        title: fileName.split('.')[0] || 'Untitled Presentation',
-        originalFileName: fileName,
-        uploadDate: fileDate ? new Date(fileDate) : new Date()
-      }));
+    if (storedData) {
+      try {
+        // Parse the stored presentation data
+        const parsedData = JSON.parse(storedData);
+        
+        // Fix the date which gets serialized to string in sessionStorage
+        parsedData.uploadDate = new Date(parsedData.uploadDate);
+        
+        setPresentation(parsedData);
+      } catch (error) {
+        console.error('Error parsing presentation data:', error);
+        // Redirect back to upload page if there's an error
+        navigate('/');
+        toast({
+          variant: "destructive",
+          title: "Error loading presentation",
+          description: "Please try uploading your file again."
+        });
+      }
+    } else {
+      // If no presentation data is found, redirect back to the upload page
+      navigate('/');
+      toast({
+        variant: "destructive",
+        title: "No presentation found",
+        description: "Please upload a presentation file first."
+      });
     }
-  }, []);
+  }, [navigate, toast]);
+  
+  if (!presentation) {
+    return (
+      <div className="flex flex-col min-h-screen">
+        <Header />
+        <main className="container mx-auto px-4 py-8 flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <h2 className="text-xl font-medium mb-2">Loading presentation...</h2>
+            <Progress value={50} className="w-64 h-2" />
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
   
   const completedCount = presentation.slides.filter(slide => 
     slide.status === 'approved' || slide.status === 'rejected' || slide.status === 'modified'
@@ -50,12 +74,15 @@ const PresentationAnalyzer = () => {
   const progressPercentage = (completedCount / presentation.slides.length) * 100;
   
   const handleApprove = (slideId: string) => {
-    setPresentation(prev => ({
-      ...prev,
-      slides: prev.slides.map(slide => 
-        slide.id === slideId ? { ...slide, status: 'approved' } : slide
-      )
-    }));
+    setPresentation(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        slides: prev.slides.map(slide => 
+          slide.id === slideId ? { ...slide, status: 'approved' } : slide
+        )
+      };
+    });
     
     toast({
       title: "Slide approved",
@@ -69,12 +96,15 @@ const PresentationAnalyzer = () => {
   };
   
   const handleReject = (slideId: string) => {
-    setPresentation(prev => ({
-      ...prev,
-      slides: prev.slides.map(slide => 
-        slide.id === slideId ? { ...slide, status: 'rejected' } : slide
-      )
-    }));
+    setPresentation(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        slides: prev.slides.map(slide => 
+          slide.id === slideId ? { ...slide, status: 'rejected' } : slide
+        )
+      };
+    });
     
     toast({
       title: "Slide rejected",
@@ -89,12 +119,15 @@ const PresentationAnalyzer = () => {
   
   const handleEdit = (slideId: string) => {
     // In a real app, this would open a slide editor
-    setPresentation(prev => ({
-      ...prev,
-      slides: prev.slides.map(slide => 
-        slide.id === slideId ? { ...slide, status: 'modified' } : slide
-      )
-    }));
+    setPresentation(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        slides: prev.slides.map(slide => 
+          slide.id === slideId ? { ...slide, status: 'modified' } : slide
+        )
+      };
+    });
     
     toast({
       title: "Slide marked for manual editing",
