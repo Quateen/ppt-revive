@@ -53,7 +53,7 @@ export const extractTextFromPowerPoint = async (file: File): Promise<string[]> =
       const response = await fetch("https://api.cloudmersive.com/convert/pptx/to/txt", {
         method: "POST",
         headers: {
-          "Apikey": "YOUR_CLOUDMERSIVE_API_KEY" // Replace with actual API key or preferably get from environment
+          "Apikey": "af6862af-3416-4e3a-989c-f3531f34bbb5" // Using the provided API key
         },
         body: formData,
       });
