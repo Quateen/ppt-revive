@@ -20,11 +20,15 @@ const SlideComparison: React.FC<SlideComparisonProps> = ({
   onReject,
   onEdit
 }) => {
+  // Ensure slide content is displayed properly by handling empty content
+  const originalContent = slide.originalContent || 'No content available for this slide';
+  const suggestedUpdate = slide.suggestedUpdate || 'No suggested update available for this slide';
+  
   return (
     <Card className="mb-6">
       <CardHeader className="pb-3">
         <div className="flex justify-between items-center">
-          <CardTitle className="text-lg">Slide {slide.number}: {slide.title}</CardTitle>
+          <CardTitle className="text-lg">Slide {slide.number}: {slide.title || `Untitled Slide ${slide.number}`}</CardTitle>
           <Badge variant={slide.status === 'pending' ? 'outline' : 'default'} className={
             slide.status === 'approved' ? 'bg-green-100 text-green-800 hover:bg-green-100' : 
             slide.status === 'rejected' ? 'bg-red-100 text-red-800 hover:bg-red-100' : ''
@@ -38,15 +42,15 @@ const SlideComparison: React.FC<SlideComparisonProps> = ({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <h3 className="text-sm font-medium text-gray-500 mb-2">Original Content</h3>
-            <div className="bg-gray-50 p-4 rounded-md min-h-[200px] text-gray-800">
-              {slide.originalContent}
+            <div className="bg-gray-50 p-4 rounded-md min-h-[200px] text-gray-800 whitespace-pre-wrap">
+              {originalContent}
             </div>
           </div>
           
           <div>
             <h3 className="text-sm font-medium text-gray-500 mb-2">Suggested Update</h3>
-            <div className="bg-medical-50 p-4 rounded-md min-h-[200px] text-gray-800">
-              {slide.suggestedUpdate}
+            <div className="bg-blue-50 p-4 rounded-md min-h-[200px] text-gray-800 whitespace-pre-wrap">
+              {suggestedUpdate}
             </div>
           </div>
         </div>
@@ -61,7 +65,7 @@ const SlideComparison: React.FC<SlideComparisonProps> = ({
           </>
         )}
         
-        {slide.sourceCitations && (
+        {slide.sourceCitations && slide.sourceCitations.length > 0 && (
           <>
             <Separator className="my-4" />
             <div>
@@ -88,7 +92,7 @@ const SlideComparison: React.FC<SlideComparisonProps> = ({
           <Button 
             variant="outline" 
             onClick={() => onEdit(slide.id)}
-            className="text-medical-700"
+            className="text-blue-700"
             disabled={slide.status !== 'pending'}
           >
             <Pencil className="h-4 w-4 mr-2" />

@@ -8,7 +8,6 @@ import ReferencesList from '@/components/ReferencesList';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/components/ui/use-toast';
-import { mockReferences } from '@/mockData/samplePresentation';
 import { Presentation, Slide } from '@/types/presentation';
 import { Download, ChevronLeft, ChevronRight } from 'lucide-react';
 
@@ -27,8 +26,12 @@ const PresentationAnalyzer = () => {
         // Parse the stored presentation data
         const parsedData = JSON.parse(storedData);
         
+        console.log("Loaded presentation data:", parsedData);
+        
         // Fix the date which gets serialized to string in sessionStorage
-        parsedData.uploadDate = new Date(parsedData.uploadDate);
+        if (parsedData.uploadDate) {
+          parsedData.uploadDate = new Date(parsedData.uploadDate);
+        }
         
         setPresentation(parsedData);
       } catch (error) {
@@ -154,7 +157,12 @@ const PresentationAnalyzer = () => {
     }, 2000);
   };
   
-  const currentSlide: Slide = presentation.slides[currentIndex];
+  // Make sure we don't try to access a slide that doesn't exist
+  const safeIndex = Math.min(currentIndex, presentation.slides.length - 1);
+  const currentSlide: Slide = presentation.slides[safeIndex];
+
+  // Use the presentation's references if available, otherwise use mock
+  const references = presentation.references || [];
   
   return (
     <div className="flex flex-col min-h-screen">
@@ -231,7 +239,7 @@ const PresentationAnalyzer = () => {
           </div>
           
           <div className="lg:w-1/4">
-            <ReferencesList references={mockReferences} />
+            <ReferencesList references={references} />
           </div>
         </div>
       </main>
