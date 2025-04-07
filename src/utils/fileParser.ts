@@ -1,5 +1,4 @@
-
-import { Presentation } from '@/types/presentation';
+import { Presentation, Reference } from '@/types/presentation';
 import { createPresentation } from './presentationFactory';
 import { mockPresentation } from '@/mockData/samplePresentation';
 
@@ -62,12 +61,13 @@ export async function createPresentationFromFile(file: File): Promise<Presentati
       });
       
       // Generate custom references relevant to the presentation
+      const topics = file.name.replace(/\.[^/.]+$/, '').split(/[_\s-]/).filter(word => word.length > 2);
       customMock.references = Array.from({ length: 5 }, (_, i) => ({
         id: `ref-${i+1}`,
-        citation: `Author et al. (${2023 - i}). "${fileNameBase} related study ${i+1}". Journal of ${topics[0] || 'Professional'} Studies, ${50 + i}(${i+2}), ${100 + i*10}-${120 + i*10}.`,
+        citation: `Author et al. (${2023 - i}). "${file.name.replace(/\.[^/.]+$/, '')} related study ${i+1}". Journal of ${topics[0] || 'Professional'} Studies, ${50 + i}(${i+2}), ${100 + i*10}-${120 + i*10}.`,
         year: 2023 - i,
         journal: `Journal of ${topics[0] || 'Professional'} Studies`,
-        type: ['journal', 'guideline', 'review', 'meta-analysis'][i % 4] as any
+        type: ['journal', 'guideline', 'review', 'meta-analysis', 'other'][i % 5] as any
       }));
       
       return customMock;

@@ -18,6 +18,7 @@ export interface Presentation {
   uploadDate: Date;
   slides: Slide[];
   isAnalysisComplete: boolean;
+  references?: Reference[];
 }
 
 export interface Reference {

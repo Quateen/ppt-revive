@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
@@ -8,7 +7,7 @@ import ReferencesList from '@/components/ReferencesList';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/components/ui/use-toast';
-import { Presentation, Slide } from '@/types/presentation';
+import { Presentation, Slide, Reference } from '@/types/presentation';
 import { Download, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const PresentationAnalyzer = () => {
@@ -17,18 +16,15 @@ const PresentationAnalyzer = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   
-  // Load presentation data from sessionStorage
   useEffect(() => {
     const storedData = sessionStorage.getItem('presentationData');
     
     if (storedData) {
       try {
-        // Parse the stored presentation data
         const parsedData = JSON.parse(storedData);
         
         console.log("Loaded presentation data:", parsedData);
         
-        // Fix the date which gets serialized to string in sessionStorage
         if (parsedData.uploadDate) {
           parsedData.uploadDate = new Date(parsedData.uploadDate);
         }
@@ -36,7 +32,6 @@ const PresentationAnalyzer = () => {
         setPresentation(parsedData);
       } catch (error) {
         console.error('Error parsing presentation data:', error);
-        // Redirect back to upload page if there's an error
         navigate('/');
         toast({
           variant: "destructive",
@@ -45,7 +40,6 @@ const PresentationAnalyzer = () => {
         });
       }
     } else {
-      // If no presentation data is found, redirect back to the upload page
       navigate('/');
       toast({
         variant: "destructive",
@@ -92,7 +86,6 @@ const PresentationAnalyzer = () => {
       description: "The suggested updates will be included in your final presentation."
     });
     
-    // Move to next slide if available
     if (currentIndex < presentation.slides.length - 1) {
       setCurrentIndex(currentIndex + 1);
     }
@@ -114,14 +107,12 @@ const PresentationAnalyzer = () => {
       description: "The original slide content will be preserved in your final presentation."
     });
     
-    // Move to next slide if available
     if (currentIndex < presentation.slides.length - 1) {
       setCurrentIndex(currentIndex + 1);
     }
   };
   
   const handleEdit = (slideId: string) => {
-    // In a real app, this would open a slide editor
     setPresentation(prev => {
       if (!prev) return prev;
       return {
@@ -139,30 +130,25 @@ const PresentationAnalyzer = () => {
   };
   
   const handleGeneratePresentation = () => {
-    // In a real app, this would generate and download the updated presentation
     toast({
       title: "Generating presentation",
       description: "Your updated presentation is being prepared for download."
     });
     
-    // Simulate processing delay
     setTimeout(() => {
       toast({
         title: "Presentation ready",
         description: "Your updated presentation has been generated successfully."
       });
       
-      // In a real app, this would trigger the actual download
       navigate('/download');
     }, 2000);
   };
   
-  // Make sure we don't try to access a slide that doesn't exist
   const safeIndex = Math.min(currentIndex, presentation.slides.length - 1);
   const currentSlide: Slide = presentation.slides[safeIndex];
 
-  // Use the presentation's references if available, otherwise use mock
-  const references = presentation.references || [];
+  const references: Reference[] = presentation.references || [];
   
   return (
     <div className="flex flex-col min-h-screen">
@@ -187,7 +173,6 @@ const PresentationAnalyzer = () => {
               </div>
             </div>
             
-            {/* Navigation controls */}
             <div className="flex justify-between mb-6">
               <Button 
                 variant="outline" 
@@ -210,7 +195,6 @@ const PresentationAnalyzer = () => {
               </Button>
             </div>
             
-            {/* Current slide comparison */}
             <SlideComparison 
               slide={currentSlide}
               onApprove={handleApprove}
@@ -218,7 +202,6 @@ const PresentationAnalyzer = () => {
               onEdit={handleEdit}
             />
             
-            {/* Generate button */}
             <div className="mt-8 text-center">
               <Button 
                 size="lg" 
