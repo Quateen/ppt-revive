@@ -10,7 +10,7 @@ export function extractSlidesFromContent(content: string): string[] {
   // First, check if content appears to be binary or has encoding issues
   if (hasBinaryContent(content)) {
     console.log("Content appears to be binary or have encoding issues. Creating a single slide.");
-    return [sanitizeContent(content)];
+    return [sanitizeContent("[Binary PowerPoint Content]")];
   }
   
   const methods = [
@@ -51,8 +51,8 @@ function hasBinaryContent(content: string): boolean {
     }
   }
   
-  // If more than 20% of the sampled content is non-printable, consider it binary
-  return (nonPrintableCount / sampleSize) > 0.2;
+  // If more than 5% of the sampled content is non-printable, consider it binary
+  return (nonPrintableCount / sampleSize) > 0.05;
 }
 
 /**

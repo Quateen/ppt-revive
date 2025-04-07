@@ -18,7 +18,7 @@ export function createPresentation(
   const isBinaryContent = checkForBinaryContent(content);
   
   // Extract all slides from content
-  const rawSlides = isBinaryContent ? [content] : extractSlidesFromContent(content);
+  const rawSlides = isBinaryContent ? ['[Binary PowerPoint Content]'] : extractSlidesFromContent(content);
   console.log(`Extracted ${rawSlides.length} slides from content`);
   
   // Process slides into structured Slide objects
@@ -36,14 +36,30 @@ export function createPresentation(
     };
   });
   
+  // If binary content and no actual slides were detected, create placeholder slides
+  if (isBinaryContent && (slides.length === 0 || 
+     (slides.length === 1 && slides[0].originalContent === '[Binary PowerPoint Content]'))) {
+    // Estimate slide count based on file size (rough approximation)
+    const estimatedSlideCount = 10; // Default to 10 slides for binary content
+    
+    // Create placeholder slides
+    for (let i = 0; i < estimatedSlideCount; i++) {
+      slides.push({
+        id: uuidv4(),
+        number: i + 1,
+        title: `Slide ${i + 1}`,
+        originalContent: `[Binary PowerPoint Content - Slide ${i + 1}]`,
+        suggestedUpdate: `[Binary PowerPoint Content - Slide ${i + 1}]`,
+        status: 'pending',
+      });
+    }
+  }
+  
   // Extract presentation title from first slide or filename
   let title = fileName.replace(/\.[^/.]+$/, ''); // Default to filename without extension
   
-  if (slides.length > 0) {
-    const firstSlideTitle = extractTitleFromSlide(slides[0].originalContent);
-    if (firstSlideTitle && firstSlideTitle !== "Untitled Slide") {
-      title = firstSlideTitle;
-    }
+  if (slides.length > 0 && !slides[0].title.startsWith('Slide ')) {
+    title = slides[0].title;
   }
   
   return {
@@ -63,7 +79,7 @@ export function createPresentation(
 function checkForBinaryContent(content: string): boolean {
   if (!content) return false;
   
-  // Calculate the ratio of problematic characters
+  // Calculate the ratio of non-printable characters
   let nonTextChars = 0;
   
   // Sample the content (check up to 1000 characters to save performance)
@@ -80,6 +96,6 @@ function checkForBinaryContent(content: string): boolean {
     }
   }
   
-  // If more than 10% of the sampled content contains non-text chars, consider it binary
-  return (nonTextChars / sampleSize) > 0.1;
+  // If more than 5% of the sampled content contains non-text chars, consider it binary
+  return (nonTextChars / sampleSize) > 0.05;
 }

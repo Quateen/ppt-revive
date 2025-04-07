@@ -3,6 +3,11 @@
  * Extracts a title from slide content
  */
 export function extractTitleFromSlide(content: string): string {
+  // Handle empty content
+  if (!content || content.trim().length === 0) {
+    return "Untitled Slide";
+  }
+  
   // Check if content contains binary or encoding issues
   if (containsEncodingIssues(content)) {
     return "Untitled Slide";
@@ -86,7 +91,6 @@ function containsEncodingIssues(text: string): boolean {
     }
     
     // Check for unusual Unicode characters or potential encoding issues
-    // Non-standard punctuation and symbols
     if ((charCode >= 0x2000 && charCode <= 0x206F) || // General punctuation
         (charCode >= 0xFFF0 && charCode <= 0xFFFF) || // Specials
         (charCode >= 0xFE00 && charCode <= 0xFE0F) || // Variation selectors
@@ -100,6 +104,6 @@ function containsEncodingIssues(text: string): boolean {
     }
   }
   
-  // If more than 15% are control or special chars, likely corrupt/binary content
-  return (controlCharCount + specialCharCount) / text.length > 0.15;
+  // If more than 5% are control or special chars, likely corrupt/binary content
+  return (controlCharCount + specialCharCount) / text.length > 0.05;
 }

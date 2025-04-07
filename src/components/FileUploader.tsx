@@ -19,7 +19,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({ onFileUploaded }) => {
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const uploadedFile = acceptedFiles[0];
     
-    // Check if file is a PowerPoint file or Excel (for pptx files)
+    // Check if file is a PowerPoint file
     const isPowerPoint = /\.(ppt|pptx|pot|potx|pps|ppsx|pptm|potm|ppsm)$/i.test(uploadedFile.name);
     if (!isPowerPoint) {
       toast({
@@ -30,6 +30,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({ onFileUploaded }) => {
       return;
     }
     
+    console.log(`File accepted: ${uploadedFile.name}, size: ${uploadedFile.size} bytes, type: ${uploadedFile.type}`);
     setFile(uploadedFile);
     simulateUpload(uploadedFile);
   }, [toast]);
