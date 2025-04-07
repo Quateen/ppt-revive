@@ -7,6 +7,12 @@ import { marked } from 'marked';
 export function extractSlidesFromContent(content: string): string[] {
   console.log("Attempting to extract slides from content...");
   
+  // First, check if content appears to be binary or has encoding issues
+  if (hasBinaryContent(content)) {
+    console.log("Content appears to be binary or have encoding issues. Creating a single slide.");
+    return [sanitizeContent(content)];
+  }
+  
   const methods = [
     extractSlidesByRegex,
     extractSlidesByHeaders,
@@ -18,13 +24,50 @@ export function extractSlidesFromContent(content: string): string[] {
     const slides = method(content);
     if (slides.length > 1) {
       console.log(`Successfully extracted ${slides.length} slides using ${method.name}`);
-      return slides;
+      return slides.map(sanitizeContent);
     }
   }
   
   // Fallback: Just return the whole content as one slide
   console.log("Falling back to treating entire content as one slide");
-  return [content];
+  return [sanitizeContent(content)];
+}
+
+/**
+ * Checks if content appears to be binary or has encoding issues
+ */
+function hasBinaryContent(content: string): boolean {
+  if (!content) return false;
+  
+  // Sample the first few characters to check for binary content
+  const sampleSize = Math.min(content.length, 500);
+  let nonPrintableCount = 0;
+  
+  for (let i = 0; i < sampleSize; i++) {
+    const char = content.charCodeAt(i);
+    // Count characters outside normal text ranges (excluding common whitespace)
+    if ((char < 32 && char !== 9 && char !== 10 && char !== 13) || char > 126) {
+      nonPrintableCount++;
+    }
+  }
+  
+  // If more than 20% of the sampled content is non-printable, consider it binary
+  return (nonPrintableCount / sampleSize) > 0.2;
+}
+
+/**
+ * Sanitizes content to remove or replace problematic characters
+ */
+function sanitizeContent(content: string): string {
+  if (!content) return '';
+  
+  // Replace non-printable ASCII characters (except common whitespace)
+  let sanitized = content.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, '');
+  
+  // Replace common problematic Unicode characters
+  sanitized = sanitized.replace(/[\uFFFD\uFFFE\uFFFF]/g, '');
+  
+  return sanitized;
 }
 
 /**
@@ -165,12 +208,18 @@ function extractSlidesByParagraphs(content: string): string[] {
  * Clean and normalize the extracted slide content
  */
 export function cleanSlideContent(content: string): string {
+  if (!content) return '';
+  
   let cleaned = content.trim();
   
   // Remove common patterns from exports like slide numbers
   cleaned = cleaned.replace(/^Slide \d+:?\s*/i, '');
   cleaned = cleaned.replace(/^\[Slide \d+\]\s*/i, '');
   cleaned = cleaned.replace(/^#{1,6} Slide \d+\s*/i, '');
+  
+  // Replace problematic characters
+  cleaned = cleaned.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, '');
+  cleaned = cleaned.replace(/[\uFFFD\uFFFE\uFFFF]/g, '');
   
   return cleaned;
 }
