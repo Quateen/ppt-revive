@@ -9,24 +9,27 @@ import About from "./pages/About";
 import PresentationAnalyzer from "./pages/PresentationAnalyzer";
 import DownloadPage from "./pages/DownloadPage";
 import NotFound from "./pages/NotFound";
+import "./App.css";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/about" element={<About />} />
-          <Route path="/analyzer" element={<PresentationAnalyzer />} />
-          <Route path="/download" element={<DownloadPage />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
+    <div className="dark">
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/analyzer" element={<PresentationAnalyzer />} />
+            <Route path="/download" element={<DownloadPage />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </div>
   </QueryClientProvider>
 );
 

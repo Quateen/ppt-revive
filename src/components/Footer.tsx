@@ -2,39 +2,41 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 
-const Footer: React.FC = () => {
+const Footer = () => {
+  const currentYear = new Date().getFullYear();
+  
   return (
-    <footer className="bg-white border-t border-gray-200 mt-auto">
+    <footer className="bg-black border-t border-gray-800">
       <div className="container mx-auto px-4 py-6">
-        <div className="flex flex-col md:flex-row justify-between items-center">
-          <div className="mb-4 md:mb-0">
-            <div className="flex items-center gap-2">
-              <span className="font-semibold text-gray-800">MediPresent</span>
-              <span className="text-medical-600">Revive</span>
-            </div>
-            <p className="text-sm text-gray-600 mt-1">
-              Updating medical presentations with the latest research
-            </p>
+        <div className="flex flex-col md:flex-row items-center justify-between">
+          <div className="text-sm text-gray-400">
+            &copy; {currentYear} NeuroSlideAI. All rights reserved.
           </div>
           
-          <div className="flex gap-6">
-            <Link to="/" className="text-sm text-gray-600 hover:text-medical-600">
-              Home
-            </Link>
-            <Link to="/about" className="text-sm text-gray-600 hover:text-medical-600">
-              About
-            </Link>
-            <Link to="/privacy" className="text-sm text-gray-600 hover:text-medical-600">
-              Privacy
-            </Link>
-            <Link to="/terms" className="text-sm text-gray-600 hover:text-medical-600">
-              Terms
-            </Link>
-          </div>
-        </div>
-        
-        <div className="mt-6 border-t border-gray-100 pt-4 text-center text-sm text-gray-500">
-          © {new Date().getFullYear()} MediPresent Revive. All rights reserved.
+          <nav className="mt-4 md:mt-0">
+            <ul className="flex space-x-6">
+              <li>
+                <Link to="/" className="text-sm text-gray-400 hover:text-white transition-colors">
+                  Home
+                </Link>
+              </li>
+              <li>
+                <Link to="/about" className="text-sm text-gray-400 hover:text-white transition-colors">
+                  About
+                </Link>
+              </li>
+              <li>
+                <a href="#" className="text-sm text-gray-400 hover:text-white transition-colors">
+                  Terms of Use
+                </a>
+              </li>
+              <li>
+                <a href="#" className="text-sm text-gray-400 hover:text-white transition-colors">
+                  Privacy Policy
+                </a>
+              </li>
+            </ul>
+          </nav>
         </div>
       </div>
     </footer>

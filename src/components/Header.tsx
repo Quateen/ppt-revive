@@ -1,36 +1,38 @@
 
 import React from 'react';
-import { Book, FileText, Home } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import BrainLogo from './BrainLogo';
 import { Button } from '@/components/ui/button';
+import { Home, Info } from 'lucide-react';
 
-const Header: React.FC = () => {
+const Header = () => {
   return (
-    <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
-      <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-        <Link to="/" className="flex items-center gap-2">
-          <div className="bg-medical-600 p-1.5 rounded-md">
-            <FileText className="w-5 h-5 text-white" />
+    <header className="app-header border-b border-gray-800 bg-black">
+      <div className="container mx-auto px-4 py-4">
+        <div className="flex justify-between items-center">
+          <div className="flex items-center space-x-6">
+            <Link to="/" className="flex items-center">
+              <h1 className="text-2xl font-bold text-white">NeuroSlide<span className="text-neuro-purple">AI</span></h1>
+            </Link>
+            
+            <nav className="hidden md:flex space-x-4">
+              <Button variant="ghost" asChild className="text-white hover:text-primary hover:bg-gray-900">
+                <Link to="/" className="flex items-center">
+                  <Home className="mr-2 h-4 w-4" />
+                  Home
+                </Link>
+              </Button>
+              <Button variant="ghost" asChild className="text-white hover:text-primary hover:bg-gray-900">
+                <Link to="/about" className="flex items-center">
+                  <Info className="mr-2 h-4 w-4" />
+                  About
+                </Link>
+              </Button>
+            </nav>
           </div>
-          <span className="font-semibold text-lg text-gray-800">MediPresent</span>
-          <span className="text-medical-600 font-medium">Revive</span>
-        </Link>
-        
-        <nav className="flex gap-4">
-          <Button variant="ghost" size="sm" asChild>
-            <Link to="/" className="flex items-center gap-1.5">
-              <Home className="w-4 h-4" />
-              <span>Home</span>
-            </Link>
-          </Button>
           
-          <Button variant="ghost" size="sm" asChild>
-            <Link to="/about" className="flex items-center gap-1.5">
-              <Book className="w-4 h-4" />
-              <span>About</span>
-            </Link>
-          </Button>
-        </nav>
+          <BrainLogo />
+        </div>
       </div>
     </header>
   );
