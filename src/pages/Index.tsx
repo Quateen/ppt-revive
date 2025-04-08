@@ -6,7 +6,7 @@ import Footer from '@/components/Footer';
 import FileUploader from '@/components/FileUploader';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
-import { processPresentationFile } from '@/utils/fileParser';
+import { createPresentationFromFile } from '@/utils/fileParser';
 import { Brain } from 'lucide-react';
 
 const Index = () => {
@@ -18,7 +18,7 @@ const Index = () => {
     setIsLoading(true);
 
     try {
-      const presentationData = await processPresentationFile(file);
+      const presentationData = await createPresentationFromFile(file);
       
       if (presentationData) {
         // Store the data in session storage
@@ -58,7 +58,7 @@ const Index = () => {
             </p>
             
             <div className="mb-6">
-              <FileUploader onFileProcessed={handleFileProcessed} isLoading={isLoading} />
+              <FileUploader onFileUploaded={handleFileProcessed} isLoading={isLoading} />
             </div>
             
             <div className="text-center">
