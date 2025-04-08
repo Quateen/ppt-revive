@@ -26,6 +26,7 @@ const PresentationAnalyzer = () => {
         
         console.log("Loaded presentation data:", parsedData);
         
+        // Ensure dates are properly converted from strings to Date objects
         if (parsedData.uploadDate) {
           parsedData.uploadDate = new Date(parsedData.uploadDate);
         }
@@ -49,6 +50,24 @@ const PresentationAnalyzer = () => {
       });
     }
   }, [navigate, toast]);
+  
+  // Save presentation data to sessionStorage whenever it changes
+  useEffect(() => {
+    if (presentation) {
+      try {
+        // Save the current state of the presentation
+        sessionStorage.setItem('presentationData', JSON.stringify(presentation));
+        console.log("Saved updated presentation data to sessionStorage");
+      } catch (error) {
+        console.error('Error saving presentation data to sessionStorage:', error);
+        toast({
+          variant: "destructive",
+          title: "Error saving progress",
+          description: "We couldn't save your progress. Please don't refresh the page."
+        });
+      }
+    }
+  }, [presentation, toast]);
   
   if (!presentation) {
     return (
@@ -74,17 +93,19 @@ const PresentationAnalyzer = () => {
   const handleApprove = (slideId: string) => {
     setPresentation(prev => {
       if (!prev) return prev;
+      
+      // Create a new slides array with the updated slide
       const updatedSlides = prev.slides.map(slide => 
         slide.id === slideId ? { ...slide, status: 'approved' } : slide
       );
       
       const updatedPresentation = {
         ...prev,
-        slides: updatedSlides
+        slides: updatedSlides,
+        lastUpdated: new Date()
       };
       
-      // Save the updated presentation to sessionStorage
-      sessionStorage.setItem('presentationData', JSON.stringify(updatedPresentation));
+      console.log(`Slide ${slideId} approved. Updated presentation:`, updatedPresentation);
       
       return updatedPresentation;
     });
@@ -102,17 +123,19 @@ const PresentationAnalyzer = () => {
   const handleReject = (slideId: string) => {
     setPresentation(prev => {
       if (!prev) return prev;
+      
+      // Create a new slides array with the updated slide
       const updatedSlides = prev.slides.map(slide => 
         slide.id === slideId ? { ...slide, status: 'rejected' } : slide
       );
       
       const updatedPresentation = {
         ...prev,
-        slides: updatedSlides
+        slides: updatedSlides,
+        lastUpdated: new Date()
       };
       
-      // Save the updated presentation to sessionStorage
-      sessionStorage.setItem('presentationData', JSON.stringify(updatedPresentation));
+      console.log(`Slide ${slideId} rejected. Updated presentation:`, updatedPresentation);
       
       return updatedPresentation;
     });
@@ -130,17 +153,19 @@ const PresentationAnalyzer = () => {
   const handleEdit = (slideId: string) => {
     setPresentation(prev => {
       if (!prev) return prev;
+      
+      // Create a new slides array with the updated slide
       const updatedSlides = prev.slides.map(slide => 
         slide.id === slideId ? { ...slide, status: 'modified' } : slide
       );
       
       const updatedPresentation = {
         ...prev,
-        slides: updatedSlides
+        slides: updatedSlides,
+        lastUpdated: new Date()
       };
       
-      // Save the updated presentation to sessionStorage
-      sessionStorage.setItem('presentationData', JSON.stringify(updatedPresentation));
+      console.log(`Slide ${slideId} marked for editing. Updated presentation:`, updatedPresentation);
       
       return updatedPresentation;
     });
@@ -157,20 +182,31 @@ const PresentationAnalyzer = () => {
       // Make sure we're using the latest state when saving to sessionStorage
       const finalPresentationData = {
         ...presentation,
-        generatedAt: new Date().toISOString()
+        generatedAt: new Date().toISOString(),
+        completedCount,
+        isAnalysisComplete: true
       };
       
-      sessionStorage.setItem('finalPresentationData', JSON.stringify(finalPresentationData));
-      console.log("Saved final presentation data:", finalPresentationData);
-      
-      toast({
-        title: "Generating presentation",
-        description: "Your updated presentation is being prepared for download."
-      });
-      
-      setTimeout(() => {
-        navigate('/download');
-      }, 1500);
+      try {
+        sessionStorage.setItem('finalPresentationData', JSON.stringify(finalPresentationData));
+        console.log("Saved final presentation data:", finalPresentationData);
+        
+        toast({
+          title: "Generating presentation",
+          description: "Your updated presentation is being prepared for download."
+        });
+        
+        setTimeout(() => {
+          navigate('/download');
+        }, 1500);
+      } catch (error) {
+        console.error('Error saving final presentation data:', error);
+        toast({
+          variant: "destructive",
+          title: "Error generating presentation",
+          description: "There was an error preparing your download."
+        });
+      }
     }
   };
   
@@ -236,7 +272,7 @@ const PresentationAnalyzer = () => {
                 size="lg" 
                 onClick={handleGeneratePresentation}
                 disabled={completedCount < presentation.slides.length}
-                className="px-8"
+                className="px-8 bg-blue-600 hover:bg-blue-700"
               >
                 <Download className="h-5 w-5 mr-2" />
                 Generate Updated Presentation
