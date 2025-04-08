@@ -7,10 +7,12 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Check, Download, FileType, Home } from 'lucide-react';
 import { Presentation } from '@/types/presentation';
+import { useToast } from '@/components/ui/use-toast';
 
 const DownloadPage = () => {
   const [downloading, setDownloading] = useState(true);
   const [presentation, setPresentation] = useState<Presentation | null>(null);
+  const { toast } = useToast();
   
   useEffect(() => {
     // Get the final presentation data from sessionStorage
@@ -19,10 +21,23 @@ const DownloadPage = () => {
     if (storedData) {
       try {
         const parsedData = JSON.parse(storedData);
+        console.log("Loading presentation data for download:", parsedData);
         setPresentation(parsedData);
       } catch (error) {
         console.error('Error parsing final presentation data:', error);
+        toast({
+          variant: "destructive",
+          title: "Error loading presentation",
+          description: "Could not load your presentation data."
+        });
       }
+    } else {
+      console.warn("No presentation data found in sessionStorage");
+      toast({
+        variant: "destructive",
+        title: "No presentation found",
+        description: "Could not find any presentation data to download."
+      });
     }
     
     // Simulate download completion after 2 seconds
@@ -31,7 +46,7 @@ const DownloadPage = () => {
     }, 2000);
     
     return () => clearTimeout(timer);
-  }, []);
+  }, [toast]);
   
   // Count slides that were approved/modified
   const approvedCount = presentation?.slides.filter(
@@ -49,18 +64,42 @@ const DownloadPage = () => {
   const downloadFileName = `${fileNameBase} (Updated).pptx`;
   
   const handleDownload = () => {
-    // In a real implementation, this would generate and download the file
-    // For now, we'll just simulate a download with an alert
-    alert(`Downloading ${downloadFileName}`);
+    if (!presentation) {
+      toast({
+        variant: "destructive",
+        title: "Download failed",
+        description: "No presentation data available to download."
+      });
+      return;
+    }
     
-    // In a real app, you would do something like:
-    // const blob = new Blob([data], { type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation' });
-    // const url = URL.createObjectURL(blob);
-    // const a = document.createElement('a');
-    // a.href = url;
-    // a.download = downloadFileName;
-    // a.click();
-    // URL.revokeObjectURL(url);
+    toast({
+      title: "Starting download",
+      description: `Downloading ${downloadFileName}`
+    });
+
+    // In a real implementation, we would generate the PPTX file and trigger download
+    // For this demo, we'll create a simple text file to demonstrate the download functionality
+    const content = JSON.stringify(presentation, null, 2);
+    const blob = new Blob([content], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = downloadFileName;
+    document.body.appendChild(a);
+    a.click();
+    
+    // Clean up
+    setTimeout(() => {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }, 0);
+    
+    toast({
+      title: "Download complete",
+      description: `${downloadFileName} has been downloaded.`
+    });
   };
   
   return (

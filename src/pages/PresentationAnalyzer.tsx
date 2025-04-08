@@ -74,12 +74,19 @@ const PresentationAnalyzer = () => {
   const handleApprove = (slideId: string) => {
     setPresentation(prev => {
       if (!prev) return prev;
-      return {
+      const updatedSlides = prev.slides.map(slide => 
+        slide.id === slideId ? { ...slide, status: 'approved' } : slide
+      );
+      
+      const updatedPresentation = {
         ...prev,
-        slides: prev.slides.map(slide => 
-          slide.id === slideId ? { ...slide, status: 'approved' } : slide
-        )
+        slides: updatedSlides
       };
+      
+      // Save the updated presentation to sessionStorage
+      sessionStorage.setItem('presentationData', JSON.stringify(updatedPresentation));
+      
+      return updatedPresentation;
     });
     
     toast({
@@ -95,12 +102,19 @@ const PresentationAnalyzer = () => {
   const handleReject = (slideId: string) => {
     setPresentation(prev => {
       if (!prev) return prev;
-      return {
+      const updatedSlides = prev.slides.map(slide => 
+        slide.id === slideId ? { ...slide, status: 'rejected' } : slide
+      );
+      
+      const updatedPresentation = {
         ...prev,
-        slides: prev.slides.map(slide => 
-          slide.id === slideId ? { ...slide, status: 'rejected' } : slide
-        )
+        slides: updatedSlides
       };
+      
+      // Save the updated presentation to sessionStorage
+      sessionStorage.setItem('presentationData', JSON.stringify(updatedPresentation));
+      
+      return updatedPresentation;
     });
     
     toast({
@@ -116,12 +130,19 @@ const PresentationAnalyzer = () => {
   const handleEdit = (slideId: string) => {
     setPresentation(prev => {
       if (!prev) return prev;
-      return {
+      const updatedSlides = prev.slides.map(slide => 
+        slide.id === slideId ? { ...slide, status: 'modified' } : slide
+      );
+      
+      const updatedPresentation = {
         ...prev,
-        slides: prev.slides.map(slide => 
-          slide.id === slideId ? { ...slide, status: 'modified' } : slide
-        )
+        slides: updatedSlides
       };
+      
+      // Save the updated presentation to sessionStorage
+      sessionStorage.setItem('presentationData', JSON.stringify(updatedPresentation));
+      
+      return updatedPresentation;
     });
     
     toast({
@@ -133,7 +154,14 @@ const PresentationAnalyzer = () => {
   const handleGeneratePresentation = () => {
     // Store the updated presentation data with all the slide status changes
     if (presentation) {
-      sessionStorage.setItem('finalPresentationData', JSON.stringify(presentation));
+      // Make sure we're using the latest state when saving to sessionStorage
+      const finalPresentationData = {
+        ...presentation,
+        generatedAt: new Date().toISOString()
+      };
+      
+      sessionStorage.setItem('finalPresentationData', JSON.stringify(finalPresentationData));
+      console.log("Saved final presentation data:", finalPresentationData);
       
       toast({
         title: "Generating presentation",

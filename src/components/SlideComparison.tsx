@@ -25,7 +25,7 @@ const SlideComparison: React.FC<SlideComparisonProps> = ({
   const suggestedUpdate = slide.suggestedUpdate || 'No suggested update available for this slide';
   
   return (
-    <Card className="mb-6">
+    <Card className="mb-6 shadow-md">
       <CardHeader className="pb-3">
         <div className="flex justify-between items-center">
           <CardTitle className="text-lg">Slide {slide.number}: {slide.title || `Untitled Slide ${slide.number}`}</CardTitle>
@@ -43,14 +43,14 @@ const SlideComparison: React.FC<SlideComparisonProps> = ({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <h3 className="text-sm font-medium text-gray-500 mb-2">Original Content</h3>
-            <div className="bg-gray-50 p-4 rounded-md min-h-[200px] text-gray-800 whitespace-pre-wrap">
+            <div className="bg-gray-50 p-4 rounded-md min-h-[200px] text-gray-800 whitespace-pre-wrap border border-gray-200">
               {originalContent}
             </div>
           </div>
           
           <div>
             <h3 className="text-sm font-medium text-gray-500 mb-2">Suggested Update</h3>
-            <div className="bg-blue-50 p-4 rounded-md min-h-[200px] text-gray-800 whitespace-pre-wrap">
+            <div className="bg-blue-50 p-4 rounded-md min-h-[200px] text-gray-800 whitespace-pre-wrap border border-blue-100">
               {suggestedUpdate}
             </div>
           </div>
