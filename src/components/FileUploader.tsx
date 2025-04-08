@@ -8,10 +8,9 @@ import { useToast } from '@/components/ui/use-toast';
 
 interface FileUploaderProps {
   onFileUploaded: (file: File) => void;
-  isLoading?: boolean;
 }
 
-const FileUploader: React.FC<FileUploaderProps> = ({ onFileUploaded, isLoading = false }) => {
+const FileUploader: React.FC<FileUploaderProps> = ({ onFileUploaded }) => {
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -110,7 +109,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({ onFileUploaded, isLoading =
               variant="ghost" 
               size="sm" 
               onClick={removeFile}
-              disabled={uploading || isLoading}
+              disabled={uploading}
               className="text-gray-500 hover:text-gray-700"
             >
               <X className="h-4 w-4" />

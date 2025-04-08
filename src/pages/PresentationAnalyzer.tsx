@@ -75,7 +75,7 @@ const PresentationAnalyzer = () => {
     setPresentation(prev => {
       if (!prev) return prev;
       const updatedSlides = prev.slides.map(slide => 
-        slide.id === slideId ? { ...slide, status: 'approved' as const } : slide
+        slide.id === slideId ? { ...slide, status: 'approved' } : slide
       );
       
       const updatedPresentation = {
@@ -103,7 +103,7 @@ const PresentationAnalyzer = () => {
     setPresentation(prev => {
       if (!prev) return prev;
       const updatedSlides = prev.slides.map(slide => 
-        slide.id === slideId ? { ...slide, status: 'rejected' as const } : slide
+        slide.id === slideId ? { ...slide, status: 'rejected' } : slide
       );
       
       const updatedPresentation = {
@@ -131,7 +131,7 @@ const PresentationAnalyzer = () => {
     setPresentation(prev => {
       if (!prev) return prev;
       const updatedSlides = prev.slides.map(slide => 
-        slide.id === slideId ? { ...slide, status: 'modified' as const } : slide
+        slide.id === slideId ? { ...slide, status: 'modified' } : slide
       );
       
       const updatedPresentation = {
