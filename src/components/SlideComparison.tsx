@@ -31,7 +31,8 @@ const SlideComparison: React.FC<SlideComparisonProps> = ({
           <CardTitle className="text-lg">Slide {slide.number}: {slide.title || `Untitled Slide ${slide.number}`}</CardTitle>
           <Badge variant={slide.status === 'pending' ? 'outline' : 'default'} className={
             slide.status === 'approved' ? 'bg-green-100 text-green-800 hover:bg-green-100' : 
-            slide.status === 'rejected' ? 'bg-red-100 text-red-800 hover:bg-red-100' : ''
+            slide.status === 'rejected' ? 'bg-red-100 text-red-800 hover:bg-red-100' : 
+            slide.status === 'modified' ? 'bg-blue-100 text-blue-800 hover:bg-blue-100' : ''
           }>
             {slide.status.charAt(0).toUpperCase() + slide.status.slice(1)}
           </Badge>

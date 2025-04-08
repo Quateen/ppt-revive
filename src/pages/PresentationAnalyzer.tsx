@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
@@ -130,19 +131,19 @@ const PresentationAnalyzer = () => {
   };
   
   const handleGeneratePresentation = () => {
-    toast({
-      title: "Generating presentation",
-      description: "Your updated presentation is being prepared for download."
-    });
-    
-    setTimeout(() => {
+    // Store the updated presentation data with all the slide status changes
+    if (presentation) {
+      sessionStorage.setItem('finalPresentationData', JSON.stringify(presentation));
+      
       toast({
-        title: "Presentation ready",
-        description: "Your updated presentation has been generated successfully."
+        title: "Generating presentation",
+        description: "Your updated presentation is being prepared for download."
       });
       
-      navigate('/download');
-    }, 2000);
+      setTimeout(() => {
+        navigate('/download');
+      }, 1500);
+    }
   };
   
   const safeIndex = Math.min(currentIndex, presentation.slides.length - 1);
