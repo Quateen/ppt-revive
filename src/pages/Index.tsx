@@ -1,109 +1,80 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import FileUploader from '@/components/FileUploader';
 import { Button } from '@/components/ui/button';
-import { useToast } from '@/components/ui/use-toast';
-import { createPresentationFromFile } from '@/utils/fileParser';
-import { Brain } from 'lucide-react';
+import { FileText, Search, RefreshCw, Download } from 'lucide-react';
 
 const Index = () => {
-  const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
   const navigate = useNavigate();
 
-  const handleFileProcessed = async (file: File) => {
-    setIsLoading(true);
-
-    try {
-      const presentationData = await createPresentationFromFile(file);
-      
-      if (presentationData) {
-        // Store the data in session storage
-        sessionStorage.setItem('presentationData', JSON.stringify(presentationData));
-        
-        toast({
-          title: "Success!",
-          description: "Your presentation has been analyzed. Redirecting...",
-        });
-        
-        // Navigate to the analyzer page
-        setTimeout(() => {
-          navigate('/analyzer');
-        }, 1500);
-      }
-    } catch (error) {
-      console.error('Error processing file:', error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "There was a problem processing your file. Please try again.",
-      });
-      setIsLoading(false);
-    }
-  };
-
   return (
-    <div className="flex flex-col min-h-screen bg-black">
+    <div className="flex flex-col min-h-screen bg-white">
       <Header />
       
-      <main className="flex-1 container mx-auto px-4 py-8">
-        <div className="max-w-3xl mx-auto">
-          <div className="glass-card rounded-lg p-6 mb-8 neuro-glow">
-            <h1 className="text-3xl font-bold mb-2 text-white">Enhance Your Presentations with AI</h1>
-            <p className="text-lg mb-6 text-gray-300">
-              Upload your presentation and our neural AI will analyze and suggest improvements for your slides.
+      <main className="flex-1">
+        {/* Hero Section */}
+        <section className="bg-medical-gradient py-16 md:py-32 text-white text-center">
+          <div className="container mx-auto px-4">
+            <h1 className="text-3xl md:text-5xl font-bold mb-6">
+              Keep Medical Presentations Up-to-Date with the Latest Research
+            </h1>
+            <p className="text-xl md:text-2xl max-w-3xl mx-auto mb-10">
+              MediPresent Revive automatically analyzes your existing slides and suggests updates
+              based on recent medical literature.
             </p>
+            <Button 
+              size="lg"
+              variant="outline" 
+              className="bg-white text-primary hover:bg-gray-100 text-lg"
+              onClick={() => navigate('/analyzer')}
+            >
+              Get Started
+            </Button>
+          </div>
+        </section>
+        
+        {/* How It Works Section */}
+        <section className="py-16 bg-white">
+          <div className="container mx-auto px-4">
+            <h2 className="text-3xl font-bold text-center mb-16">How It Works</h2>
             
-            <div className="mb-6">
-              <FileUploader onFileUploaded={handleFileProcessed} isLoading={isLoading} />
-            </div>
-            
-            <div className="text-center">
-              <Button
-                variant="outline" 
-                className="bg-neuro-gradient text-white border border-purple-700/50 hover:bg-purple-800"
-                disabled={isLoading}
-                onClick={() => {
-                  // Use sample data for demo
-                  const sampleData = require('@/mockData/samplePresentation').default;
-                  sessionStorage.setItem('presentationData', JSON.stringify(sampleData));
-                  
-                  toast({
-                    title: "Demo mode",
-                    description: "Loading sample presentation data...",
-                  });
-                  
-                  setTimeout(() => {
-                    navigate('/analyzer');
-                  }, 1500);
-                }}
-              >
-                <Brain className="mr-2 h-5 w-5" />
-                Try with Demo Presentation
-              </Button>
+            <div className="grid md:grid-cols-4 gap-8 text-center">
+              <div className="flex flex-col items-center">
+                <div className="text-blue-600 mb-6">
+                  <FileText size={48} />
+                </div>
+                <h3 className="text-xl font-semibold mb-2">Upload Presentation</h3>
+                <p className="text-gray-600">Upload your PowerPoint presentation for analysis</p>
+              </div>
+              
+              <div className="flex flex-col items-center">
+                <div className="text-blue-600 mb-6">
+                  <Search size={48} />
+                </div>
+                <h3 className="text-xl font-semibold mb-2">AI Analysis</h3>
+                <p className="text-gray-600">Our AI searches for recent relevant research</p>
+              </div>
+              
+              <div className="flex flex-col items-center">
+                <div className="text-blue-600 mb-6">
+                  <RefreshCw size={48} />
+                </div>
+                <h3 className="text-xl font-semibold mb-2">Review Updates</h3>
+                <p className="text-gray-600">Approve or reject suggested changes</p>
+              </div>
+              
+              <div className="flex flex-col items-center">
+                <div className="text-blue-600 mb-6">
+                  <Download size={48} />
+                </div>
+                <h3 className="text-xl font-semibold mb-2">Download Updated Slides</h3>
+                <p className="text-gray-600">Get your presentation with all the latest research</p>
+              </div>
             </div>
           </div>
-          
-          <div className="grid md:grid-cols-3 gap-6">
-            <div className="glass-card rounded-lg p-6">
-              <h3 className="text-xl font-semibold mb-2 text-white">AI-Powered Analysis</h3>
-              <p className="text-gray-300">Our neural network examines your content for clarity, impact, and engagement potential.</p>
-            </div>
-            
-            <div className="glass-card rounded-lg p-6">
-              <h3 className="text-xl font-semibold mb-2 text-white">Smart Suggestions</h3>
-              <p className="text-gray-300">Get recommendations for improvements based on best presentation practices.</p>
-            </div>
-            
-            <div className="glass-card rounded-lg p-6">
-              <h3 className="text-xl font-semibold mb-2 text-white">Easy Updates</h3>
-              <p className="text-gray-300">Accept or reject suggestions and download your enhanced presentation.</p>
-            </div>
-          </div>
-        </div>
+        </section>
       </main>
       
       <Footer />
