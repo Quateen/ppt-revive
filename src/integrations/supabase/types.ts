@@ -9,7 +9,246 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      slideenhancer_pdtehd_analyses: {
+        Row: {
+          analysis_type: string
+          created_at: string
+          id: number
+          presentation_title: string
+          results: Json
+          user_email: string
+        }
+        Insert: {
+          analysis_type: string
+          created_at?: string
+          id?: number
+          presentation_title: string
+          results: Json
+          user_email: string
+        }
+        Update: {
+          analysis_type?: string
+          created_at?: string
+          id?: number
+          presentation_title?: string
+          results?: Json
+          user_email?: string
+        }
+        Relationships: []
+      }
+      slideenhancer_pdtehd_enhancement_jobs: {
+        Row: {
+          ai_service_id: string
+          created_at: string | null
+          enhancement_options: Json | null
+          id: string
+          presentation_id: string | null
+          status: string | null
+          updated_at: string | null
+          user_email: string
+        }
+        Insert: {
+          ai_service_id: string
+          created_at?: string | null
+          enhancement_options?: Json | null
+          id?: string
+          presentation_id?: string | null
+          status?: string | null
+          updated_at?: string | null
+          user_email: string
+        }
+        Update: {
+          ai_service_id?: string
+          created_at?: string | null
+          enhancement_options?: Json | null
+          id?: string
+          presentation_id?: string | null
+          status?: string | null
+          updated_at?: string | null
+          user_email?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "slideenhancer_pdtehd_enhancement_jobs_presentation_id_fkey"
+            columns: ["presentation_id"]
+            isOneToOne: false
+            referencedRelation: "slideenhancer_pdtehd_presentations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      slideenhancer_pdtehd_presentations: {
+        Row: {
+          created_at: string | null
+          id: string
+          original_file_name: string
+          project_id: string | null
+          slide_count: number
+          status: string | null
+          storage_key: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          original_file_name: string
+          project_id?: string | null
+          slide_count?: number
+          status?: string | null
+          storage_key: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          original_file_name?: string
+          project_id?: string | null
+          slide_count?: number
+          status?: string | null
+          storage_key?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "slideenhancer_pdtehd_presentations_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "slideenhancer_pdtehd_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      slideenhancer_pdtehd_profiles: {
+        Row: {
+          created_at: string | null
+          first_name: string | null
+          id: string
+          is_premium: boolean | null
+          last_login: string | null
+          last_name: string | null
+          roles: string[] | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          first_name?: string | null
+          id: string
+          is_premium?: boolean | null
+          last_login?: string | null
+          last_name?: string | null
+          roles?: string[] | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          first_name?: string | null
+          id?: string
+          is_premium?: boolean | null
+          last_login?: string | null
+          last_name?: string | null
+          roles?: string[] | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      slideenhancer_pdtehd_projects: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          name: string
+          status: string | null
+          updated_at: string | null
+          user_email: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          status?: string | null
+          updated_at?: string | null
+          user_email: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          status?: string | null
+          updated_at?: string | null
+          user_email?: string
+        }
+        Relationships: []
+      }
+      slideenhancer_pdtehd_references: {
+        Row: {
+          created_at: string
+          id: number
+          query: string
+          reference_data: Json
+          user_email: string
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          query: string
+          reference_data: Json
+          user_email: string
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          query?: string
+          reference_data?: Json
+          user_email?: string
+        }
+        Relationships: []
+      }
+      slideenhancer_pdtehd_slides: {
+        Row: {
+          created_at: string | null
+          enhanced_content: string | null
+          id: string
+          is_approved: boolean | null
+          is_modified: boolean | null
+          original_content: string | null
+          presentation_id: string | null
+          slide_number: number
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          enhanced_content?: string | null
+          id?: string
+          is_approved?: boolean | null
+          is_modified?: boolean | null
+          original_content?: string | null
+          presentation_id?: string | null
+          slide_number: number
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          enhanced_content?: string | null
+          id?: string
+          is_approved?: boolean | null
+          is_modified?: boolean | null
+          original_content?: string | null
+          presentation_id?: string | null
+          slide_number?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "slideenhancer_pdtehd_slides_presentation_id_fkey"
+            columns: ["presentation_id"]
+            isOneToOne: false
+            referencedRelation: "slideenhancer_pdtehd_presentations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

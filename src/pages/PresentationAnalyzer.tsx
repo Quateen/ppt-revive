@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
@@ -96,18 +95,14 @@ const PresentationAnalyzer = () => {
       
       // Create a new slides array with the updated slide
       const updatedSlides = prev.slides.map(slide => 
-        slide.id === slideId ? { ...slide, status: 'approved' } : slide
+        slide.id === slideId ? { ...slide, status: 'approved' as const } : slide
       );
       
-      const updatedPresentation = {
+      return {
         ...prev,
         slides: updatedSlides,
         lastUpdated: new Date()
       };
-      
-      console.log(`Slide ${slideId} approved. Updated presentation:`, updatedPresentation);
-      
-      return updatedPresentation;
     });
     
     toast({
@@ -126,18 +121,14 @@ const PresentationAnalyzer = () => {
       
       // Create a new slides array with the updated slide
       const updatedSlides = prev.slides.map(slide => 
-        slide.id === slideId ? { ...slide, status: 'rejected' } : slide
+        slide.id === slideId ? { ...slide, status: 'rejected' as const } : slide
       );
       
-      const updatedPresentation = {
+      return {
         ...prev,
         slides: updatedSlides,
         lastUpdated: new Date()
       };
-      
-      console.log(`Slide ${slideId} rejected. Updated presentation:`, updatedPresentation);
-      
-      return updatedPresentation;
     });
     
     toast({
@@ -156,18 +147,14 @@ const PresentationAnalyzer = () => {
       
       // Create a new slides array with the updated slide
       const updatedSlides = prev.slides.map(slide => 
-        slide.id === slideId ? { ...slide, status: 'modified' } : slide
+        slide.id === slideId ? { ...slide, status: 'modified' as const } : slide
       );
       
-      const updatedPresentation = {
+      return {
         ...prev,
         slides: updatedSlides,
         lastUpdated: new Date()
       };
-      
-      console.log(`Slide ${slideId} marked for editing. Updated presentation:`, updatedPresentation);
-      
-      return updatedPresentation;
     });
     
     toast({

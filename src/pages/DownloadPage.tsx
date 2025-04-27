@@ -101,9 +101,9 @@ const DownloadPage = () => {
       }, 100);
       
       toast({
+        variant: "default", // Changed from "success" to "default" as only "default" and "destructive" are valid variants
         title: "Download complete",
         description: `${downloadFileName} has been downloaded successfully.`,
-        variant: "success"
       });
     } catch (error) {
       console.error('Error downloading presentation:', error);
