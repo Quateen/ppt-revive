@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
@@ -95,7 +96,7 @@ const PresentationAnalyzer = () => {
       
       // Create a new slides array with the updated slide
       const updatedSlides = prev.slides.map(slide => 
-        slide.id === slideId ? { ...slide, status: 'approved' as const } : slide
+        slide.id === slideId ? { ...slide, status: 'approved' as 'approved' } : slide
       );
       
       return {
@@ -121,7 +122,7 @@ const PresentationAnalyzer = () => {
       
       // Create a new slides array with the updated slide
       const updatedSlides = prev.slides.map(slide => 
-        slide.id === slideId ? { ...slide, status: 'rejected' as const } : slide
+        slide.id === slideId ? { ...slide, status: 'rejected' as 'rejected' } : slide
       );
       
       return {
@@ -147,7 +148,7 @@ const PresentationAnalyzer = () => {
       
       // Create a new slides array with the updated slide
       const updatedSlides = prev.slides.map(slide => 
-        slide.id === slideId ? { ...slide, status: 'modified' as const } : slide
+        slide.id === slideId ? { ...slide, status: 'modified' as 'modified' } : slide
       );
       
       return {
