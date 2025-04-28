@@ -94,10 +94,13 @@ const PresentationAnalyzer = () => {
     setPresentation(prev => {
       if (!prev) return prev;
       
-      // Create a new slides array with the updated slide
-      const updatedSlides = prev.slides.map(slide => 
-        slide.id === slideId ? { ...slide, status: 'approved' as 'approved' } : slide
-      );
+      // Create a new slides array with the updated slide, ensuring correct typing
+      const updatedSlides = prev.slides.map(slide => {
+        if (slide.id === slideId) {
+          return { ...slide, status: 'approved' as const };
+        }
+        return slide;
+      });
       
       return {
         ...prev,
@@ -120,10 +123,13 @@ const PresentationAnalyzer = () => {
     setPresentation(prev => {
       if (!prev) return prev;
       
-      // Create a new slides array with the updated slide
-      const updatedSlides = prev.slides.map(slide => 
-        slide.id === slideId ? { ...slide, status: 'rejected' as 'rejected' } : slide
-      );
+      // Create a new slides array with the updated slide, ensuring correct typing
+      const updatedSlides = prev.slides.map(slide => {
+        if (slide.id === slideId) {
+          return { ...slide, status: 'rejected' as const };
+        }
+        return slide;
+      });
       
       return {
         ...prev,
@@ -146,10 +152,13 @@ const PresentationAnalyzer = () => {
     setPresentation(prev => {
       if (!prev) return prev;
       
-      // Create a new slides array with the updated slide
-      const updatedSlides = prev.slides.map(slide => 
-        slide.id === slideId ? { ...slide, status: 'modified' as 'modified' } : slide
-      );
+      // Create a new slides array with the updated slide, ensuring correct typing
+      const updatedSlides = prev.slides.map(slide => {
+        if (slide.id === slideId) {
+          return { ...slide, status: 'modified' as const };
+        }
+        return slide;
+      });
       
       return {
         ...prev,
@@ -248,12 +257,14 @@ const PresentationAnalyzer = () => {
               </Button>
             </div>
             
-            <SlideComparison 
-              slide={currentSlide}
-              onApprove={handleApprove}
-              onReject={handleReject}
-              onEdit={handleEdit}
-            />
+            {currentSlide && (
+              <SlideComparison 
+                slide={currentSlide}
+                onApprove={handleApprove}
+                onReject={handleReject}
+                onEdit={handleEdit}
+              />
+            )}
             
             <div className="mt-8 text-center">
               <Button 

@@ -20,21 +20,21 @@ const SlideComparison: React.FC<SlideComparisonProps> = ({
   onReject,
   onEdit
 }) => {
-  // Ensure slide content is displayed properly by handling empty content
-  const originalContent = slide?.originalContent || 'No content available for this slide';
-  const suggestedUpdate = slide?.suggestedUpdate || 'No suggested update available for this slide';
+  // Always ensure we have content to display, even if empty
+  const originalContent = slide.originalContent || 'No content available for this slide';
+  const suggestedUpdate = slide.suggestedUpdate || 'No suggested update available for this slide';
   
   return (
     <Card className="mb-6 shadow-md border border-gray-200 hover:border-gray-300 transition-colors">
       <CardHeader className="pb-3 border-b border-gray-100">
         <div className="flex justify-between items-center">
-          <CardTitle className="text-lg">Slide {slide?.number}: {slide?.title || `Untitled Slide ${slide?.number}`}</CardTitle>
-          <Badge variant={slide?.status === 'pending' ? 'outline' : 'default'} className={
-            slide?.status === 'approved' ? 'bg-green-100 text-green-800 hover:bg-green-100' : 
-            slide?.status === 'rejected' ? 'bg-red-100 text-red-800 hover:bg-red-100' : 
-            slide?.status === 'modified' ? 'bg-blue-100 text-blue-800 hover:bg-blue-100' : ''
+          <CardTitle className="text-lg">Slide {slide.number}: {slide.title || `Untitled Slide ${slide.number}`}</CardTitle>
+          <Badge variant={slide.status === 'pending' ? 'outline' : 'default'} className={
+            slide.status === 'approved' ? 'bg-green-100 text-green-800 hover:bg-green-100' : 
+            slide.status === 'rejected' ? 'bg-red-100 text-red-800 hover:bg-red-100' : 
+            slide.status === 'modified' ? 'bg-blue-100 text-blue-800 hover:bg-blue-100' : ''
           }>
-            {slide?.status?.charAt(0).toUpperCase() + slide?.status?.slice(1)}
+            {slide.status.charAt(0).toUpperCase() + slide.status.slice(1)}
           </Badge>
         </div>
       </CardHeader>
@@ -44,6 +44,7 @@ const SlideComparison: React.FC<SlideComparisonProps> = ({
           <div>
             <h3 className="text-sm font-medium text-gray-600 mb-2">Original Content</h3>
             <div className="bg-gray-50 p-4 rounded-md min-h-[200px] text-gray-800 whitespace-pre-wrap border-2 border-gray-200 shadow-inner overflow-auto">
+              {/* Render content directly to ensure proper display */}
               {originalContent}
             </div>
           </div>
@@ -51,12 +52,13 @@ const SlideComparison: React.FC<SlideComparisonProps> = ({
           <div>
             <h3 className="text-sm font-medium text-gray-600 mb-2">Suggested Update</h3>
             <div className="bg-blue-50 p-4 rounded-md min-h-[200px] text-gray-800 whitespace-pre-wrap border-2 border-blue-200 shadow-inner overflow-auto">
+              {/* Ensure proper display of suggested updates */}
               {suggestedUpdate}
             </div>
           </div>
         </div>
         
-        {slide?.updateReason && (
+        {slide.updateReason && (
           <>
             <Separator className="my-4" />
             <div>
@@ -66,7 +68,7 @@ const SlideComparison: React.FC<SlideComparisonProps> = ({
           </>
         )}
         
-        {slide?.sourceCitations && slide.sourceCitations.length > 0 && (
+        {slide.sourceCitations && slide.sourceCitations.length > 0 && (
           <>
             <Separator className="my-4" />
             <div>

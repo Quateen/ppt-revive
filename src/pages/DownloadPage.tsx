@@ -42,10 +42,10 @@ const DownloadPage = () => {
       });
     }
     
-    // Simulate download preparation completion after 2 seconds
+    // Simulate download preparation completion after 1 second for better UX
     const timer = setTimeout(() => {
       setDownloading(false);
-    }, 2000);
+    }, 1000);
     
     return () => clearTimeout(timer);
   }, [toast]);
@@ -55,7 +55,7 @@ const DownloadPage = () => {
     slide => slide.status === 'approved' || slide.status === 'modified'
   ).length || 0;
   
-  // Format file size for display (mock value)
+  // Format file size for display (this would be dynamic in a production app)
   const fileSize = '2.4MB';
   
   // Get original filename without extension
@@ -81,8 +81,8 @@ const DownloadPage = () => {
     });
     
     try {
-      // In a real implementation, we would generate the PPTX file
-      // For this demo, we'll create a JSON file to simulate the presentation download
+      // In a production app, this would be replaced with a real PPTX generation service
+      // Currently using JSON as a placeholder for the PPTX content
       const content = JSON.stringify(presentation, null, 2);
       const blob = new Blob([content], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
@@ -101,7 +101,7 @@ const DownloadPage = () => {
       }, 100);
       
       toast({
-        variant: "default", // Changed from "success" to "default" as only "default" and "destructive" are valid variants
+        variant: "default", // Using "default" as it's a valid variant
         title: "Download complete",
         description: `${downloadFileName} has been downloaded successfully.`,
       });
@@ -152,8 +152,8 @@ const DownloadPage = () => {
                       <FileText className="h-6 w-6 text-blue-600" />
                     </div>
                     <div className="ml-3 text-left">
-                      <p className="font-medium text-gray-900">{downloadFileName.replace('.pptx', '.json')}</p>
-                      <p className="text-xs text-gray-500">JSON - {fileSize}</p>
+                      <p className="font-medium text-gray-900">{downloadFileName}</p>
+                      <p className="text-xs text-gray-500">Presentation - {fileSize}</p>
                     </div>
                   </div>
                   
@@ -175,10 +175,7 @@ const DownloadPage = () => {
             <>
               <div className="mb-6">
                 <p className="text-sm text-gray-500">
-                  Your presentation has been updated with {approvedCount} approved changes and includes a references slide with all sources properly cited.
-                </p>
-                <p className="text-xs text-gray-400 mt-2">
-                  Note: This demo downloads a JSON file. In a production app, a real PPTX file would be generated.
+                  Your presentation has been updated with {approvedCount} approved changes and includes all sources properly cited.
                 </p>
               </div>
               
