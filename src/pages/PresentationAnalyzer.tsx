@@ -5,11 +5,13 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import SlideComparison from '@/components/SlideComparison';
 import ReferencesList from '@/components/ReferencesList';
-import { Button } from '@/components/ui/button';
+import PresentationHeader from '@/components/PresentationHeader';
+import ProgressDisplay from '@/components/ProgressDisplay';
+import SlideNavigation from '@/components/SlideNavigation';
+import GeneratePresentationButton from '@/components/GeneratePresentationButton';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/components/ui/use-toast';
 import { Presentation, Slide, Reference } from '@/types/presentation';
-import { Download, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const PresentationAnalyzer = () => {
   const [presentation, setPresentation] = useState<Presentation | null>(null);
@@ -83,12 +85,6 @@ const PresentationAnalyzer = () => {
       </div>
     );
   }
-  
-  const completedCount = presentation.slides.filter(slide => 
-    slide.status === 'approved' || slide.status === 'rejected' || slide.status === 'modified'
-  ).length;
-  
-  const progressPercentage = (completedCount / presentation.slides.length) * 100;
   
   const handleApprove = (slideId: string) => {
     setPresentation(prev => {
@@ -173,6 +169,14 @@ const PresentationAnalyzer = () => {
     });
   };
   
+  const handleNavigatePrevious = () => {
+    setCurrentIndex(Math.max(0, currentIndex - 1));
+  };
+  
+  const handleNavigateNext = () => {
+    setCurrentIndex(Math.min(presentation.slides.length - 1, currentIndex + 1));
+  };
+  
   const handleGeneratePresentation = () => {
     // Store the updated presentation data with all the slide status changes
     if (presentation) {
@@ -180,7 +184,9 @@ const PresentationAnalyzer = () => {
       const finalPresentationData = {
         ...presentation,
         generatedAt: new Date().toISOString(),
-        completedCount,
+        completedCount: presentation.slides.filter(slide => 
+          slide.status === 'approved' || slide.status === 'rejected' || slide.status === 'modified'
+        ).length,
         isAnalysisComplete: true
       };
       
@@ -209,7 +215,6 @@ const PresentationAnalyzer = () => {
   
   const safeIndex = Math.min(currentIndex, presentation.slides.length - 1);
   const currentSlide: Slide = presentation.slides[safeIndex];
-
   const references: Reference[] = presentation.references || [];
   
   return (
@@ -219,43 +224,20 @@ const PresentationAnalyzer = () => {
       <main className="container mx-auto px-4 py-8 flex-1">
         <div className="flex flex-col lg:flex-row gap-8">
           <div className="lg:w-3/4">
-            <div className="mb-6">
-              <h1 className="text-2xl font-bold text-gray-900">{presentation.title}</h1>
-              <div className="text-sm text-gray-500 mt-1">
-                {presentation.author && <span>By {presentation.author} • </span>}
-                <span>Original file: {presentation.originalFileName}</span>
-              </div>
-              
-              <div className="mt-4 space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>Review progress</span>
-                  <span>{completedCount} of {presentation.slides.length} slides reviewed</span>
-                </div>
-                <Progress value={progressPercentage} className="h-2" />
-              </div>
-            </div>
+            <PresentationHeader 
+              title={presentation.title}
+              author={presentation.author}
+              originalFileName={presentation.originalFileName}
+            />
             
-            <div className="flex justify-between mb-6">
-              <Button 
-                variant="outline" 
-                onClick={() => setCurrentIndex(Math.max(0, currentIndex - 1))}
-                disabled={currentIndex === 0}
-                className="flex items-center"
-              >
-                <ChevronLeft className="h-4 w-4 mr-1" />
-                Previous Slide
-              </Button>
-              
-              <Button 
-                variant="outline" 
-                onClick={() => setCurrentIndex(Math.min(presentation.slides.length - 1, currentIndex + 1))}
-                disabled={currentIndex === presentation.slides.length - 1}
-                className="flex items-center"
-              >
-                Next Slide
-                <ChevronRight className="h-4 w-4 ml-1" />
-              </Button>
-            </div>
+            <ProgressDisplay slides={presentation.slides} />
+            
+            <SlideNavigation
+              currentIndex={currentIndex}
+              totalSlides={presentation.slides.length}
+              onPrevious={handleNavigatePrevious}
+              onNext={handleNavigateNext}
+            />
             
             {currentSlide && (
               <SlideComparison 
@@ -266,23 +248,10 @@ const PresentationAnalyzer = () => {
               />
             )}
             
-            <div className="mt-8 text-center">
-              <Button 
-                size="lg" 
-                onClick={handleGeneratePresentation}
-                disabled={completedCount < presentation.slides.length}
-                className="px-8 bg-blue-600 hover:bg-blue-700"
-              >
-                <Download className="h-5 w-5 mr-2" />
-                Generate Updated Presentation
-              </Button>
-              
-              {completedCount < presentation.slides.length && (
-                <p className="text-sm text-gray-500 mt-2">
-                  Please review all slides before generating your updated presentation.
-                </p>
-              )}
-            </div>
+            <GeneratePresentationButton 
+              slides={presentation.slides}
+              onGenerate={handleGeneratePresentation}
+            />
           </div>
           
           <div className="lg:w-1/4">
