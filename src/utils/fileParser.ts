@@ -51,10 +51,11 @@ export async function createPresentationFromFile(file: File): Promise<Presentati
           originalContent: slideContent,
           suggestedUpdate: suggestedContent,
           status: 'pending',
-          // Add relevant references based on the presentation content
+          // Placeholder citations generated from the slide title rather
+          // than a true analysis of the file contents
           sourceCitations: [
-            `Reference 1 for ${slideTitle} (2023)`,
-            `Reference 2 for ${slideTitle} (2022)`
+          `Reference 1 for ${slideTitle} (2023)`,
+          `Reference 2 for ${slideTitle} (2022)`
           ],
           // Add a reason for the update
           updateReason: `Updated with latest information and improved formatting for better clarity and audience engagement.`
