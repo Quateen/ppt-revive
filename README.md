@@ -36,6 +36,10 @@ ppt-revive-v2/
 - **CORS origins** moved from hardcoded values into configuration.
 - Abandoned GPT-4 regenerate endpoint rewritten to use Claude; dead code and duplicate files removed; vulnerable AutoMapper upgraded.
 
+## Going live
+
+See **[DEPLOYMENT.md](DEPLOYMENT.md)** — a single `docker compose up -d --build` on a small VM brings up MySQL, the API, the frontend, and automatic HTTPS via Caddy.
+
 ## Running locally
 
 ### Backend (`backend/`)
