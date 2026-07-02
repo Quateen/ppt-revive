@@ -56,6 +56,20 @@ public class PPTController : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet]
+    [Route("download")]
+    public async Task<IActionResult> Download(string jobId)
+    {
+        var result = await _sender.Send(new DownloadPptQuery { JobId = jobId });
+        if (!result.Status || result.Data is not DownloadPptResult file)
+            return NotFound(result);
+
+        return File(
+            file.Content,
+            "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+            file.FileName);
+    }
+
     //[AllowAnonymous]
     //[HttpPost]
     //[Route("process")]

@@ -20,10 +20,10 @@
 
   <ItemGroup>
     <PackageReference Include="Ardalis.GuardClauses" />
-    <PackageReference Include="Aspose.Slides.NET" />
     <PackageReference Include="AutoMapper" />
     <PackageReference Include="DocumentFormat.OpenXml" />
     <PackageReference Include="FluentValidation.DependencyInjectionExtensions" />
+    <PackageReference Include="Google.Apis.Auth" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" />
   </ItemGroup>

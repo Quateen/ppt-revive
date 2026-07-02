@@ -31,19 +31,6 @@ const presentationSlice = createSlice({
     resetErrorAction: (state) => {
       delete state.presentationError;
     },
-    // Stores user-edited content on a slide (kept in Redux so it survives re-renders
-    // and is available when building the finalize payload).
-    setSlideEditedContent: (
-      state,
-      action: PayloadAction<{ slideId: number; editedContent: string | null }>
-    ) => {
-      const slidePages = state.presentationStatusResponse?.result?.slidePages;
-      if (!slidePages) return;
-      const slide = slidePages.find((s) => s.slideId === action.payload.slideId);
-      if (slide) {
-        slide.editedContent = action.payload.editedContent;
-      }
-    },
     resetPresentationState: (state) => {
       state.uploadPresentationResponse = null;
       state.presentationStatusResponse = null;
@@ -127,7 +114,7 @@ const presentationSlice = createSlice({
   },
 });
 
-export const { resetErrorAction, resetPresentationState, setSlideEditedContent } = presentationSlice.actions;
+export const { resetErrorAction, resetPresentationState } = presentationSlice.actions;
 export default presentationSlice.reducer;
 
 // Selectors

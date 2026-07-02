@@ -36,6 +36,14 @@ const FileUploader: React.FC<FileUploaderProps> = ({ onFileSelected, selectedFil
     if (disabled) return;
 
     const uploadedFile = acceptedFiles[0];
+    if (!uploadedFile) {
+      toast({
+        variant: "destructive",
+        title: "No file selected",
+        description: "Please drop a single .pptx file.",
+      });
+      return;
+    }
 
     const isPptx = /\.pptx$/i.test(uploadedFile.name);
     if (!isPptx) {

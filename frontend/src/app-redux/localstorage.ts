@@ -14,6 +14,7 @@ export const loadState = (): { auth: AuthState } | undefined => {
         registerResponse: null,
         verifyEmailResponse: null,
         authError: null,
+        forgotPasswordError: null,
       },
     };
   } catch (error) {

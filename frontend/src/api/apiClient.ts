@@ -49,7 +49,7 @@ export async function sendRequest<T>(
     return response.data;
   }
 
-  throw new Error(response.data.message || "Unknown error");
+  throw new Error(response.data.message || response.data.error || "Unknown error");
 }
 
 // --- Request Interceptor ---

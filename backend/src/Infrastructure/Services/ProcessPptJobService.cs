@@ -46,20 +46,13 @@ public class ProcessPptJobService : IProcessPptJobService
             if (slideResponses.Count == 0)
                 return ErrorResponse("No valid slides found or processed.");
 
-            // string orignalFileURL = await SavePPT(fileName, pptBytes, "orignal-ppts");
-
-            var pptUpdated = CreateUpdatedPresentation(pptBytes, slideResponses);
-
-            // fileName = $"Updated_{fileName}";
-            // // Save Updated PDF
-            // string newFileURL = await SavePPT(fileName, pptUpdated, "updated-ppts");
-
+            // The finalized PPTX is generated on demand in PPTApproveCommand once the user
+            // has chosen which slides to apply — no deck is built here.
             return new ResponseBase
             {
                 Status = true,
                 Data = new PPTResponse
                 {
-                    // FileUrl = orignalFileURL,
                     FileName = fileName,
                     SlidePageCount = slideResponses.Count,
                     ProcessedAt = DateTime.UtcNow,
@@ -92,43 +85,46 @@ public class ProcessPptJobService : IProcessPptJobService
     //     return fileUrl;
     // }
 
+    // Plain snapshot of one slide's extracted text, read single-threaded from OpenXML
+    // before any parallel network work begins (DocumentFormat.OpenXml is not thread-safe).
+    private sealed class SlideExtract
+    {
+        public int SlideIndex { get; init; }
+        public int SlideNo { get; init; }
+        public string OriginalText { get; init; } = string.Empty;
+        public string? TitleText { get; init; }
+        public List<SlideTextItem> Items { get; init; } = new();
+    }
+
     private async Task<List<SlidePagesResponse>> ParseAndAnalyzeSlidesAsync(byte[] pptBytes)
     {
-        var results = new System.Collections.Concurrent.ConcurrentBag<SlidePagesResponse>();
-
-        using var memoryStream = new MemoryStream(pptBytes);
-        using var presentationDoc = PresentationDocument.Open(memoryStream, false);
-
-        var presentationPart = presentationDoc.PresentationPart!;
-        var slideIdList = presentationPart.Presentation.SlideIdList!;
-        var slideIds = slideIdList.Elements<P.SlideId>().ToList();
-
-        // Bound concurrency so a large deck can't overwhelm the Claude/PubMed APIs
-        // (NCBI allows 3 req/sec with an API key).
-        var maxParallelSlides = _configuration.GetValue<int?>("Processing:MaxParallelSlides") ?? 3;
-        using var semaphore = new SemaphoreSlim(maxParallelSlides);
-
-        var tasks = slideIds.Select(async slideId =>
+        // ---- Phase 1: extract every slide's text SEQUENTIALLY (OpenXML is not thread-safe) ----
+        var extracts = new List<SlideExtract>();
+        using (var memoryStream = new MemoryStream(pptBytes))
+        using (var presentationDoc = PresentationDocument.Open(memoryStream, false))
         {
-            await semaphore.WaitAsync();
-            try
+            var presentationPart = presentationDoc.PresentationPart!;
+            var slideIdList = presentationPart.Presentation.SlideIdList!;
+            var slideIds = slideIdList.Elements<P.SlideId>().ToList();
+
+            for (int slideIndex = 0; slideIndex < slideIds.Count; slideIndex++)
             {
-                var relId = slideId.RelationshipId;
+                var slideNo = slideIndex + 1;
+                var relId = slideIds[slideIndex].RelationshipId;
                 var slidePart = (SlidePart)presentationPart.GetPartById(relId!);
 
-                var slideIndex = slideIds.IndexOf(slideId); // 0-based index
-                var slideNo = slideIndex + 1; // 1-based ID for SlideId
+                var originalText = string.Join("\n",
+                    GetAllTextElements(slidePart.Slide).Where(t => !string.IsNullOrWhiteSpace(t))).Trim();
 
-                var allTextElements = GetAllTextElements(slidePart.Slide).ToList();
-                var originalText = string.Join("\n", allTextElements.Where(t => !string.IsNullOrWhiteSpace(t))).Trim();
-
-                Console.WriteLine($"📋 Original Text on Slide {slideNo}:\n{originalText}");
-
-                string? titleText = slidePart.Slide.Descendants<ShapeModel>()
+                // Join all runs in the title shape — a title split across multiple runs
+                // (bold word, autocorrect, etc.) would otherwise be truncated to the first run.
+                var titleRuns = slidePart.Slide.Descendants<ShapeModel>()
                     .Where(s => s.NonVisualShapeProperties?.NonVisualDrawingProperties?.Name?.Value?.ToLower().Contains("title") == true)
                     .SelectMany(s => s.TextBody?.Descendants<A.Text>() ?? [])
                     .Select(t => t.Text)
-                    .FirstOrDefault();
+                    .Where(t => !string.IsNullOrWhiteSpace(t))
+                    .ToList();
+                string? titleText = titleRuns.Any() ? string.Join(" ", titleRuns) : null;
 
                 var slideTextItems = new List<SlideTextItem>();
                 foreach (var shape in slidePart.Slide.Descendants<ShapeModel>())
@@ -149,7 +145,7 @@ public class ProcessPptJobService : IProcessPptJobService
                             {
                                 slideTextItems.Add(new SlideTextItem
                                 {
-                                    SlideIndex = slideIndex, // ✅ true index
+                                    SlideIndex = slideIndex,
                                     Text = text,
                                     ShapeName = shapeName,
                                     IsBullet = para.ParagraphProperties?.GetFirstChild<A.CharacterBullet>() != null ||
@@ -173,63 +169,100 @@ public class ProcessPptJobService : IProcessPptJobService
                     });
                 }
 
-                if (!slideTextItems.Any())
+                extracts.Add(new SlideExtract
                 {
-                    Console.WriteLine($"⚠️ Skipping Slide {slideNo} — no textual content found.");
+                    SlideIndex = slideIndex,
+                    SlideNo = slideNo,
+                    OriginalText = originalText,
+                    TitleText = titleText,
+                    Items = slideTextItems
+                });
+            }
+        }
+
+        // ---- Phase 2: run ONLY the network analysis in a bounded-parallel section ----
+        var maxParallelSlides = _configuration.GetValue<int?>("Processing:MaxParallelSlides") ?? 3;
+        using var semaphore = new SemaphoreSlim(maxParallelSlides);
+        var results = new System.Collections.Concurrent.ConcurrentBag<SlidePagesResponse>();
+
+        var tasks = extracts.Select(async extract =>
+        {
+            await semaphore.WaitAsync();
+            try
+            {
+                // A slide with no analyzable text still appears in the deck unchanged.
+                if (!extract.Items.Any())
+                {
+                    results.Add(new SlidePagesResponse
+                    {
+                        SlideId = extract.SlideNo,
+                        OriginalSlideContent = extract.OriginalText,
+                        UpdatedSlideContent = string.Empty,
+                        TitleText = extract.TitleText,
+                        References = new(),
+                        Explanation = "No textual content to update.",
+                        Source = string.Empty
+                    });
                     return;
                 }
 
-                var keywordText = string.Join(" ", slideTextItems.Select(item => item.Text));
+                var keywordText = string.Join(" ", extract.Items.Select(item => item.Text));
 
-                // Search PubMed with the Claude-extracted key terms, not the raw slide text —
-                // raw slide prose makes a poor PubMed query.
+                // Search PubMed with the Claude-extracted key terms, not raw slide prose.
                 var keyTerms = await _pubMedRepo.ExtractKeyMedicalTerms(keywordText);
                 var articles = await _pubMedRepo.SearchRelevantArticlesAsync(keyTerms);
+                var analysisResult = await _pubMedRepo.AnalyzeMedicalSlideAsync(extract.Items, articles);
 
-                Console.WriteLine($"🧠 Sending Slide {slideNo} content to Claude for enhancement...");
-                var analysisResult = await _pubMedRepo.AnalyzeMedicalSlideAsync(slideTextItems, articles);
-
-                // References for THIS slide only; the frontend aggregates and dedupes,
-                // and the finalize step compiles the distinct set into reference slides.
                 var slideReferences = articles
                     .Select(article => $"{string.Join(", ", article.Authors)}. \"{article.Title}.\" {article.Journal}, {article.PublicationDate}. DOI: {article.Doi ?? "N/A"} – {article.Link}")
                     .Distinct()
                     .ToList();
 
-                var updatedItems = JsonSerializer.Deserialize<List<SlideTextItem>>(analysisResult.SuggestedUpdate) ?? new();
-                if (!string.IsNullOrWhiteSpace(titleText))
+                // On analysis failure, keep the original content so the slide is never lost.
+                string updatedContent;
+                if (analysisResult.Success)
                 {
-                    updatedItems = updatedItems
-                        .Where(item => !item.Text.Trim().Equals(titleText.Trim(), StringComparison.OrdinalIgnoreCase))
-                        .ToList();
+                    var updatedItems = analysisResult.ParsedItems ?? new();
+                    if (!string.IsNullOrWhiteSpace(extract.TitleText))
+                    {
+                        updatedItems = updatedItems
+                            .Where(item => !item.Text.Trim().Equals(extract.TitleText!.Trim(), StringComparison.OrdinalIgnoreCase))
+                            .ToList();
+                    }
+                    updatedContent = string.Join("\n",
+                        updatedItems.Where(item => item.SlideIndex == extract.SlideIndex && !string.IsNullOrWhiteSpace(item.Text))
+                                    .Select(u => u.Text));
                 }
-
-                var filteredItems = updatedItems.Where(item => item.SlideIndex == slideIndex).ToList();
-
-                var updatedContent = string.Join("\n",
-                    filteredItems.Where(item => !string.IsNullOrWhiteSpace(item.Text)).Select(u => u.Text));
-
-                var slideGroup = updatedItems.GroupBy(x => x.SlideIndex);
-                foreach (var group in slideGroup)
+                else
                 {
-                    Console.WriteLine($"✅ AI returned {group.Count()} items for Slide {group.Key + 1}");
+                    updatedContent = string.Empty;
                 }
 
                 results.Add(new SlidePagesResponse
                 {
-                    SlideId = slideNo,
-                    OriginalSlideContent = originalText,
+                    SlideId = extract.SlideNo,
+                    OriginalSlideContent = extract.OriginalText,
                     UpdatedSlideContent = updatedContent,
-                    TitleText = titleText,
+                    TitleText = extract.TitleText,
                     References = slideReferences,
-                    Explanation = analysisResult.Explanation,
-                    Source = analysisResult.Source
+                    Explanation = analysisResult.Success ? analysisResult.Explanation : "Automatic update unavailable for this slide; original content kept.",
+                    Source = analysisResult.Success ? analysisResult.Source : string.Empty
                 });
-                Console.WriteLine($"✅ Slide {slideNo} processed.");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"❌ Error processing slide: {ex.Message}");
+                // Never drop a slide: record it with original content and a generic note.
+                Console.WriteLine($"❌ Error processing slide {extract.SlideNo}: {ex.Message}");
+                results.Add(new SlidePagesResponse
+                {
+                    SlideId = extract.SlideNo,
+                    OriginalSlideContent = extract.OriginalText,
+                    UpdatedSlideContent = string.Empty,
+                    TitleText = extract.TitleText,
+                    References = new(),
+                    Explanation = "This slide could not be processed automatically; original content kept.",
+                    Source = string.Empty
+                });
             }
             finally
             {
@@ -241,92 +274,6 @@ public class ProcessPptJobService : IProcessPptJobService
         return results.OrderBy(x => x.SlideId).ToList();
     }
 
-    //private static List<SlidePart> GetSlideNumbers(PresentationDocument presentationDoc)
-    //{
-    //    var slideParts = new List<SlidePart>();
-
-    //    var presentationPart = presentationDoc.PresentationPart!;
-    //    var slideIdList = presentationPart.Presentation.SlideIdList!;
-    //    slideParts = new List<SlidePart>();
-    //    foreach (var slideId in slideIdList.Elements<P.SlideId>())
-    //    {
-    //        var relId = slideId.RelationshipId;
-    //        var slidePart = (SlidePart)presentationPart.GetPartById(relId!);
-    //        slideParts.Add(slidePart);
-    //    }
-
-    //    return slideParts;
-    //}
-
-    private void UpdateSlideContent(SlidePart slidePart, string updatedText)
-    {
-        var contentLines = updatedText
-            .Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries)
-            .Select(line => line.Trim())
-            .Where(line => !string.IsNullOrWhiteSpace(line))
-            .ToList();
-
-        if (!contentLines.Any()) return;
-
-        var textShapes = slidePart.Slide.Descendants<ShapeModel>()
-            .Where(s => s.TextBody != null)
-            .ToList();
-
-        if (!textShapes.Any()) return;
-
-        var mainTextShape = FindMainContentShape(textShapes);
-        if (mainTextShape?.TextBody == null) return;
-
-        var textBody = mainTextShape.TextBody;
-        var existingParagraphs = textBody.Elements<A.Paragraph>().ToList();
-        var originalLevels = existingParagraphs
-            .Select(p => p.ParagraphProperties?.Level?.Value ?? 0)
-            .ToList();
-
-        if (!existingParagraphs.Any()) return;
-
-        var templatePara = existingParagraphs.FirstOrDefault(p =>
-            p.Descendants<A.Text>().Any(t => !string.IsNullOrWhiteSpace(t.Text)))
-            ?? existingParagraphs.First();
-
-        var runTemplate = templatePara.Descendants<A.Run>().FirstOrDefault();
-
-        textBody.RemoveAllChildren<A.Paragraph>();
-
-        var finalLines = SmartFitLines(contentLines, existingParagraphs.Count);
-
-        for (int i = 0; i < finalLines.Count; i++)
-        {
-            var para = new A.Paragraph();
-            var paraProps = new A.ParagraphProperties();
-
-            if (i < originalLevels.Count)
-            {
-                paraProps.Level = originalLevels[i];
-            }
-            else
-            {
-                paraProps.Level = 0;
-            }
-            para.ParagraphProperties = paraProps;
-
-            var run = new A.Run();
-            if (runTemplate?.RunProperties != null)
-            {
-                run.AppendChild((A.RunProperties)runTemplate.RunProperties.CloneNode(true));
-            }
-
-            var text = new A.Text(finalLines[i]);
-            SetSpacePreservation(text);
-            run.AppendChild(text);
-            para.AppendChild(run);
-            textBody.AppendChild(para);
-        }
-
-        slidePart.Slide.Save();
-    }
-
-
     private IEnumerable<string> GetAllTextElements(OpenXmlElement element)
     {
         return element.Descendants<A.Text>()
@@ -334,157 +281,4 @@ public class ProcessPptJobService : IProcessPptJobService
             .Where(t => !string.IsNullOrWhiteSpace(t));
     }
 
-    private void RestoreMetaText(SlidePart slidePart, string titleText, string authorText)
-    {
-        foreach (var shape in slidePart.Slide.Descendants<ShapeModel>())
-        {
-            var shapeName = shape.NonVisualShapeProperties?.NonVisualDrawingProperties?.Name?.Value?.ToLower();
-            if (string.IsNullOrWhiteSpace(shapeName)) continue;
-
-            string? contentToRestore = shapeName.Contains("title") ? titleText :
-                                      shapeName.Contains("author") ? authorText :
-                                      null;
-
-            if (contentToRestore != null && shape.TextBody != null)
-            {
-                shape.TextBody.RemoveAllChildren<A.Paragraph>();
-                var para = new A.Paragraph();
-                var run = new A.Run();
-                run.AppendChild(new A.Text(contentToRestore));
-                para.AppendChild(run);
-                shape.TextBody.AppendChild(para);
-            }
-        }
-    }
-
-    private byte[] CreateUpdatedPresentation(byte[] originalBytes, List<SlidePagesResponse> updatedSlides)
-    {
-        using var inputStream = new MemoryStream(originalBytes);
-        using var outputStream = new MemoryStream();
-        inputStream.CopyTo(outputStream);
-        outputStream.Position = 0;
-
-        try
-        {
-            using (var presentation = PresentationDocument.Open(outputStream, true))
-            {
-                var slideParts = presentation.PresentationPart?.SlideParts?.ToList();
-                if (slideParts == null || slideParts.Count == 0) return originalBytes;
-
-                for (int i = 0; i < slideParts.Count; i++)
-                {
-                    var slidePart = slideParts[i];
-                    var matched = updatedSlides.FirstOrDefault(s => s.SlideId == i + 1);
-                    if (matched == null) continue;
-
-                    var updatedText = matched.UpdatedSlideContent?.Trim();
-                    if (string.IsNullOrWhiteSpace(updatedText) || updatedText == "N/A") continue;
-
-                    UpdateSlideContent(slidePart, updatedText);
-
-                    RestoreMetaText(slidePart,
-                        titleText: matched.OriginalSlideContent.Split('\n').FirstOrDefault() ?? "",
-                        authorText: ExtractAuthorLine(matched.OriginalSlideContent));
-                }
-
-                presentation.PresentationPart?.Presentation?.Save();
-            }
-
-            return outputStream.ToArray();
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error updating presentation: {ex.Message}");
-            return originalBytes;
-        }
-    }
-
-    private static string ExtractAuthorLine(string fullText)
-    {
-        var lines = fullText.Split('\n');
-        return lines.Length >= 2 ? lines.LastOrDefault()?.Trim() ?? "" : "";
-    }
-    // --- UPDATE END ---
-
-    private List<string> SmartFitLines(List<string> lines, int maxBlocks)
-    {
-        if (lines.Count <= maxBlocks) return lines;
-
-        var safeLines = lines.Take(maxBlocks - 1).ToList();
-        var last = string.Join(" ", lines.Skip(maxBlocks - 1));
-        safeLines.Add(last);
-
-        return safeLines;
-    }
-
-    private void SetSpacePreservation(A.Text textElement)
-    {
-        textElement.SetAttribute(new OpenXmlAttribute(
-            "space",
-            "http://www.w3.org/XML/1998/namespace",
-            "preserve"
-        ));
-    }
-
-    private ShapeModel? FindMainContentShape(List<ShapeModel> textShapes)
-    {
-        if (textShapes == null || !textShapes.Any()) return null;
-
-        // Strategy 1: Find the shape with the most paragraphs (likely the main content)
-        var shapesByParagraphCount = textShapes
-            .Select(shape => new
-            {
-                Shape = shape,
-                ParagraphCount = shape.TextBody?.Descendants<A.Paragraph>().Count() ?? 0
-            })
-            .OrderByDescending(x => x.ParagraphCount);
-
-        var bestMatch = shapesByParagraphCount.FirstOrDefault();
-        return bestMatch?.Shape ?? textShapes.FirstOrDefault();
-    }
-
-    private void UpdateTextBodyWithPreservedFormatting(P.TextBody textBody, List<string> contentLines, List<A.Paragraph> existingParagraphs)
-    {
-        if (textBody == null || !existingParagraphs.Any() || !contentLines.Any()) return;
-
-        var templateParagraph = existingParagraphs.FirstOrDefault(p =>
-            p.Descendants<A.Text>().Any(t => !string.IsNullOrWhiteSpace(t.Text)))
-            ?? existingParagraphs.First();
-
-        textBody.RemoveAllChildren<A.Paragraph>();
-
-        foreach (var line in contentLines)
-        {
-            var newParagraph = (A.Paragraph)templateParagraph.CloneNode(true);
-            newParagraph.RemoveAllChildren<A.Run>();
-
-            var templateRun = templateParagraph.Descendants<A.Run>().FirstOrDefault();
-            var run = new A.Run();
-
-            if (templateRun != null)
-            {
-                var runProps = templateRun.GetFirstChild<A.RunProperties>();
-                if (runProps != null)
-                {
-                    run.AppendChild((A.RunProperties)runProps.CloneNode(true));
-                }
-            }
-
-
-            var text = new A.Text(line);
-            SetSpacePreservation(text);
-            run.AppendChild(text);
-
-            newParagraph.AppendChild(run);
-            textBody.AppendChild(newParagraph);
-        }
-    }
-}
-
-public class UpdatedSlideContent
-{
-    //public string Title { get; set; } = string.Empty;
-    public List<string> BulletPoints { get; set; } = [];
-    //public List<string> Notes { get; set; } = [];
-    //public string Summary { get; set; } = string.Empty; // optional
 }

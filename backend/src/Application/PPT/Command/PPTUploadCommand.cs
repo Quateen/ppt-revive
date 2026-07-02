@@ -51,12 +51,14 @@ public class ProcessPptHandler : IRequestHandler<PPTUploadCommand, ResponseBase>
     private readonly IMemoryCache _cache;
     private readonly IFileService _fileService;
     private readonly IConfiguration _configuration;
+    private readonly IUser _currentUser;
 
-    public ProcessPptHandler(IMemoryCache cache, IFileService fileService, IConfiguration configuration)
+    public ProcessPptHandler(IMemoryCache cache, IFileService fileService, IConfiguration configuration, IUser currentUser)
     {
         _cache = cache;
         _fileService = fileService;
         _configuration = configuration;
+        _currentUser = currentUser;
     }
 
     private ResponseBase ErrorResponse(string error)
@@ -95,6 +97,7 @@ public class ProcessPptHandler : IRequestHandler<PPTUploadCommand, ResponseBase>
             {
                 Status = ProcessingStatus.Pending,
                 FileName = fileName,
+                OwnerUserId = _currentUser.Id,
             }, TimeSpan.FromHours(2));
 
             return new ResponseBase

@@ -32,17 +32,22 @@ public class FinalizeApprovedSlidesHandler : IRequestHandler<PPTApproveCommand, 
 {
     private readonly IMemoryCache _cache;
     private readonly IFileService _fileService;
+    private readonly IUser _currentUser;
 
-    public FinalizeApprovedSlidesHandler(IMemoryCache cache, IFileService fileService)
+    public FinalizeApprovedSlidesHandler(IMemoryCache cache, IFileService fileService, IUser currentUser)
     {
         _cache = cache;
         _fileService = fileService;
+        _currentUser = currentUser;
     }
 
     public async Task<ResponseBase> Handle(PPTApproveCommand request, CancellationToken cancellationToken)
     {
-        // Check cache
-        if (!_cache.TryGetValue(request.Id, out ProcessingResult? result) || result?.Status != ProcessingStatus.Completed)
+        // Job must exist, be completed, and belong to the current user.
+        if (!_cache.TryGetValue(request.Id, out ProcessingResult? result)
+            || result == null
+            || result.OwnerUserId != _currentUser.Id
+            || result.Status != ProcessingStatus.Completed)
         {
             return new ResponseBase
             {
@@ -51,8 +56,15 @@ public class FinalizeApprovedSlidesHandler : IRequestHandler<PPTApproveCommand, 
             };
         }
 
-        dynamic resultData = result.Result!;
-        PPTResponse slideInfo = resultData;
+        // Defend against a completed-but-empty result (e.g. all slides failed).
+        if (result.Result is not PPTResponse slideInfo)
+        {
+            return new ResponseBase
+            {
+                Status = false,
+                Error = "No processed slides are available to finalize."
+            };
+        }
         var slideResponses = slideInfo.SlidePages;
 
         // Only citations backing APPROVED (or edited-and-approved) slides go into the
@@ -133,14 +145,15 @@ titleText: slideData.TitleText ?? slideData.OriginalSlideContent.Split('\n').Fir
 
         // Per-job filename: concurrent users must never overwrite each other's output.
         var newFileName = $"{request.Id}-revived.pptx";
-        var newfileUrl = await _fileService.SaveFile(newFileName, outputStream.ToArray(), PPTDirectories.UPDATED_PPT);
+        await _fileService.SaveFile(newFileName, outputStream.ToArray(), PPTDirectories.UPDATED_PPT);
 
         return new ResponseBase
         {
             Status = true,
             Data = new
             {
-                NewFilePath = newfileUrl,
+                // Authenticated, ownership-checked download endpoint (not a static URL).
+                NewFilePath = $"/api/ppt/download?jobId={request.Id}",
             }
         };
     }
@@ -303,23 +316,21 @@ titleText: slideData.TitleText ?? slideData.OriginalSlideContent.Split('\n').Fir
         foreach (var group in referenceChunks)
         {
             var newSlidePart = presentationPart.AddNewPart<SlidePart>();
-            newSlidePart.Slide = (P.Slide)referenceSlideTemplate.Slide.CloneNode(true);
 
-            var commonSlideData = newSlidePart.Slide.CommonSlideData;
-            if (commonSlideData?.ShapeTree == null)
-                continue;
+            // Build the reference slide from scratch rather than cloning the template's
+            // slide XML. Cloning would carry over background/transition/timing nodes that
+            // reference image or media relationships which don't exist on the new part,
+            // producing a corrupt package. A minimal shape tree avoids all dangling refs.
+            var shapeTree = new P.ShapeTree(
+                new P.NonVisualGroupShapeProperties(
+                    new P.NonVisualDrawingProperties { Id = 1U, Name = string.Empty },
+                    new P.NonVisualGroupShapeDrawingProperties(),
+                    new P.ApplicationNonVisualDrawingProperties()),
+                new P.GroupShapeProperties(new A.TransformGroup()));
 
-            var shapeTree = commonSlideData.ShapeTree;
+            newSlidePart.Slide = new P.Slide(new P.CommonSlideData(shapeTree));
 
-            if (shapeTree != null)
             {
-                var nvGrpShapeProps = shapeTree.Elements().OfType<P.NonVisualGroupShapeProperties>().FirstOrDefault();
-                var grpShapeProps = shapeTree.Elements().OfType<P.GroupShapeProperties>().FirstOrDefault();
-
-                shapeTree.RemoveAllChildren();
-                if (nvGrpShapeProps != null) shapeTree.Append(nvGrpShapeProps);
-                if (grpShapeProps != null) shapeTree.Append(grpShapeProps);
-
                 var titleShape = CreateTextShape(
                     "References",
                     0, 0,

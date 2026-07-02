@@ -18,15 +18,22 @@ public class EmailSenderRepository : IEmailSenderRepository
     public EmailSenderRepository(IConfiguration configuration, ILogger<EmailSenderRepository> logger)
     {
         _logger = logger;
-        _smtpServer = configuration["Smtp:Host"] ?? "smtp.zoho.com";
+        // No credential defaults: SMTP settings must come from configuration/secrets.
+        _smtpServer = configuration["Smtp:Host"] ?? string.Empty;
         _smtpPort = int.TryParse(configuration["Smtp:Port"], out int port) ? port : 587;
-        _smtpUsername = configuration["Smtp:Username"] ?? "mail@strahlenstudios.com";
-        _smtpPassword = configuration["Smtp:Username"] ?? "U5S1NSxZvKjE";
+        _smtpUsername = configuration["Smtp:Username"] ?? string.Empty;
+        _smtpPassword = configuration["Smtp:Password"] ?? string.Empty;
         _useSsl = bool.TryParse(configuration["Smtp:UseSSL"], out bool ssl) ? ssl : true;
     }
 
     public async Task SendEmailAsync(string recipientEmail, string subject, string body)
     {
+        if (string.IsNullOrWhiteSpace(_smtpServer) || string.IsNullOrWhiteSpace(_smtpUsername) || string.IsNullOrWhiteSpace(_smtpPassword))
+        {
+            _logger.LogError("SMTP is not configured (Smtp:Host/Username/Password); cannot send email to {Recipient}.", recipientEmail);
+            throw new InvalidOperationException("Email delivery is not configured.");
+        }
+
         try
         {
             using (var client = new SmtpClient(_smtpServer, _smtpPort))

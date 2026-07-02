@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Caching.Memory;
+using PPTRevive.Application.Common.Interfaces;
 using PPTRevive.Application.Common.Models;
 using PPTRevive.Domain.Entities;
 
@@ -12,10 +13,12 @@ public class GetPptProcessingStatusQuery : IRequest<ResponseBase>
 public class GetPptProcessingStatusHandler : IRequestHandler<GetPptProcessingStatusQuery, ResponseBase>
 {
     private readonly IMemoryCache _cache;
+    private readonly IUser _currentUser;
 
-    public GetPptProcessingStatusHandler(IMemoryCache cache)
+    public GetPptProcessingStatusHandler(IMemoryCache cache, IUser currentUser)
     {
         _cache = cache;
+        _currentUser = currentUser;
     }
 
     private ResponseBase ErrorResponse(string error)
@@ -31,7 +34,9 @@ public class GetPptProcessingStatusHandler : IRequestHandler<GetPptProcessingSta
     {
         try
         {
-            if (_cache.TryGetValue(request.JobId.ToString(), out ProcessingResult? result))
+            // Only the uploading user may read a job's status/result.
+            if (_cache.TryGetValue(request.JobId.ToString(), out ProcessingResult? result)
+                && result!.OwnerUserId == _currentUser.Id)
             {
                 return new ResponseBase
                 {

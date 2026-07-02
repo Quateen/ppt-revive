@@ -333,12 +333,18 @@ public class PubMedRepository : IPubMedRepository
         try
         {
             var responseString = await response.Content.ReadAsStringAsync();
-            Console.WriteLine("🔵 Full Claude Response JSON:\n" + responseString);
 
-            // Claude API response structure: { content: [{ type: "text", text: "..." }] }
             using var doc = JsonDocument.Parse(responseString);
-            var contentArray = doc.RootElement.GetProperty("content");
-            
+            var rootEl = doc.RootElement;
+
+            // A max_tokens stop means the JSON body is truncated and cannot be trusted.
+            if (rootEl.TryGetProperty("stop_reason", out var stopReasonEl) &&
+                stopReasonEl.GetString() == "max_tokens")
+            {
+                return CreateErrorResult("[]", "AI Output", "Response truncated at max_tokens.");
+            }
+
+            var contentArray = rootEl.GetProperty("content");
             rawContent = "";
             foreach (var block in contentArray.EnumerateArray())
             {
@@ -354,59 +360,70 @@ public class PubMedRepository : IPubMedRepository
             return CreateErrorResult("[]", "Parse", ex.ToString());
         }
 
-        string cleanedJson = CleanJsonResponse(rawContent);
-        if (string.IsNullOrWhiteSpace(cleanedJson))
+        // Structured outputs return valid JSON directly. Only fall back to fence-stripping
+        // if a raw parse fails (curly quotes are legal inside JSON strings — never rewrite them).
+        JsonDocument? parsed = null;
+        try { parsed = JsonDocument.Parse(rawContent); }
+        catch
         {
-            Console.WriteLine("❌ Empty cleaned JSON from Claude response");
-            return CreateErrorResult("[]", "AI Output", "Empty cleaned JSON");
+            var cleaned = CleanJsonResponse(rawContent);
+            try { parsed = JsonDocument.Parse(cleaned); }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Could not parse Claude JSON: {ex.Message}");
+                return CreateErrorResult(cleaned, "Post-Parse", ex.ToString());
+            }
         }
 
         try
         {
-            using var doc = JsonDocument.Parse(cleanedJson);
-            var root = doc.RootElement;
+            using (parsed)
+            {
+                var root = parsed.RootElement;
+                var explanation = root.TryGetProperty("explanation", out var e) ? e.GetString() ?? "" : "";
+                var source = root.TryGetProperty("source", out var s) ? s.GetString() ?? "" : "";
+                var updateArray = root.GetProperty("suggestedUpdate");
 
-            var explanation = root.GetProperty("explanation").GetString() ?? "";
-            var source = root.GetProperty("source").GetString() ?? "";
-            var updateArray = root.GetProperty("suggestedUpdate");
+                ValidateJsonStructure(updateArray.ToString());
 
-            ValidateJsonStructure(updateArray.ToString());
+                var updatedItems = JsonSerializer.Deserialize<List<SlideTextItem>>(
+                    updateArray.ToString(),
+                    new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true,
+                        Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) }
+                    }
+                ) ?? new();
 
-            var updatedItems = JsonSerializer.Deserialize<List<SlideTextItem>>(
-                updateArray.ToString(),
-                new JsonSerializerOptions
+                // Numeric-integrity guard runs against the model output while it is still
+                // aligned 1:1 with the input lines (before any title de-dup below).
+                updatedItems = EnsureNumericIntegrity(items, updatedItems, explanation);
+
+                // Drop any line the model echoed that duplicates the slide title.
+                string? titleLine = items.FirstOrDefault(x => x.ShapeName.ToLower().Contains("title"))?.Text;
+                if (!string.IsNullOrWhiteSpace(titleLine))
                 {
-                    PropertyNameCaseInsensitive = true,
-                    Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) }
+                    updatedItems = updatedItems
+                        .Where(item => item.Text.Trim() != titleLine.Trim())
+                        .ToList();
                 }
-            ) ?? new();
 
-            // Remove duplicated title if present
-            string? titleLine = items.FirstOrDefault(x => x.ShapeName.ToLower().Contains("title"))?.Text;
-            if (!string.IsNullOrWhiteSpace(titleLine))
-            {
-                updatedItems = updatedItems
-                    .Where(item => item.Text.Trim() != titleLine.Trim())
-                    .ToList();
+                Console.WriteLine($"✅ Claude analysis complete. Updated {updatedItems.Count} items.");
+
+                return new AnalysisResult
+                {
+                    SuggestedUpdate = JsonSerializer.Serialize(updatedItems, _jsonOptions),
+                    ParsedItems = updatedItems,
+                    Explanation = explanation,
+                    Source = source,
+                    Success = true
+                };
             }
-
-            // Numeric integrity guard
-            updatedItems = EnsureNumericIntegrity(items, updatedItems, explanation);
-
-            Console.WriteLine($"✅ Claude analysis complete. Updated {updatedItems.Count} items.");
-
-            return new AnalysisResult
-            {
-                SuggestedUpdate = JsonSerializer.Serialize(updatedItems, _jsonOptions),
-                ParsedItems = updatedItems,
-                Explanation = explanation,
-                Source = source
-            };
         }
         catch (Exception ex)
         {
             Console.WriteLine($"❌ Error processing Claude JSON: {ex.Message}");
-            return CreateErrorResult(cleanedJson, "Post-Parse", ex.ToString());
+            return CreateErrorResult("[]", "Post-Parse", ex.ToString());
         }
     }
 
@@ -532,13 +549,15 @@ public class PubMedRepository : IPubMedRepository
 
     private AnalysisResult CreateErrorResult(string content, string source, string errorDetails)
     {
+        // errorDetails is logged only; callers must not surface it to end users.
         Console.WriteLine($"❌ Error [{source}]: {errorDetails}");
         return new AnalysisResult
         {
-            SuggestedUpdate = content,
+            SuggestedUpdate = "[]",
             ParsedItems = new(),
             Explanation = errorDetails,
-            Source = source
+            Source = source,
+            Success = false
         };
     }
 

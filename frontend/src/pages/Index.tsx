@@ -70,22 +70,35 @@ const Index = () => {
     if (!startStatus || !jobId || hasNavigated.current) return;
 
     if (startStatus.status === ProcessingStatus.Failed) {
-
+      // The /start call itself failed: stop the spinner, tell the user, and
+      // clear the stale job so they can re-upload/retry.
+      setAnalyzing(false);
       toast({
         variant: "destructive",
         title: "Processing failed",
-        description: "The presentation could not be processed. Please try again.",
+        description:
+          startStatus.error || "The presentation could not be processed. Please try again.",
       });
+      dispatch(resetPresentationState());
       return;
     }
 
-    // If status is anything except 'Failed', start polling
+    // Stop polling once a terminal status has been reached, so we don't poll forever.
+    const currentStatus = details?.status;
+    if (
+      currentStatus === ProcessingStatus.Completed ||
+      currentStatus === ProcessingStatus.Failed
+    ) {
+      return;
+    }
+
+    // Otherwise keep polling for the job status.
     const interval = setInterval(() => {
       dispatch(getPresentationStatusAction({ jobId }));
     }, 10000); // every 10 seconds
 
     return () => clearInterval(interval);
-  }, [startStatus?.status, jobId, dispatch]);
+  }, [startStatus?.status, startStatus?.error, jobId, dispatch, details?.status]);
 
   useEffect(() => {
     if (uploading && jobId) {
@@ -110,36 +123,52 @@ const Index = () => {
   useEffect(() => {
     const currentStatus = details?.status;
 
-    const isFinalStatus = (status: number): boolean =>
-      status === ProcessingStatus.Completed || status === ProcessingStatus.Failed;
-
     if (typeof currentStatus !== "number") return;
 
-    if (isFinalStatus(currentStatus)) {
-      setAnalyzing(false);
+    const isFinalStatus =
+      currentStatus === ProcessingStatus.Completed ||
+      currentStatus === ProcessingStatus.Failed;
 
-      if (
-        currentStatus === ProcessingStatus.Completed &&
-        !hasNavigated.current &&
-        details?.result?.slidePages?.length > 0
-      ) {
-        hasNavigated.current = true;
-        navigate("/analyzer", {
-          state: {
-            jobId,
-            originalFileName: uploadedFile?.name, // 👈 send file name
-          },
-        });
+    if (!isFinalStatus) return;
+
+    setAnalyzing(false);
+
+    if (currentStatus === ProcessingStatus.Completed) {
+      const slidePages = details?.result?.slidePages;
+
+      if (slidePages && slidePages.length > 0) {
+        if (!hasNavigated.current) {
+          hasNavigated.current = true;
+          navigate("/analyzer", {
+            state: {
+              jobId,
+              originalFileName: uploadedFile?.name, // 👈 send file name
+            },
+          });
+        }
+        return;
       }
 
-      if (currentStatus === ProcessingStatus.Failed) {
-        toast({
-          variant: "destructive",
-          title: "Processing failed",
-          description: "The presentation could not be processed. Please try again.",
-        });
-      }
+      // Backend can report Completed but return no slides — treat as a failure.
+      toast({
+        variant: "destructive",
+        title: "No slides found",
+        description:
+          details?.error ||
+          "The presentation was processed but no slides were returned. Please try another file.",
+      });
+      dispatch(resetPresentationState());
+      return;
     }
+
+    // ProcessingStatus.Failed
+    toast({
+      variant: "destructive",
+      title: "Processing failed",
+      description:
+        details?.error || "The presentation could not be processed. Please try again.",
+    });
+    dispatch(resetPresentationState());
   }, [details?.status]);
 
 

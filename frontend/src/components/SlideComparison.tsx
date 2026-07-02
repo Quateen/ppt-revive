@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
-import { ThumbsUp, ThumbsDown, Pencil, Check, X } from 'lucide-react';
+import { ThumbsUp, ThumbsDown, Pencil, Check, X, RotateCcw } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Slide } from '@/types/presentation';
 
@@ -13,6 +13,7 @@ interface SlideComparisonProps {
   onApprove: (slideId: string) => void;
   onReject: (slideId: string) => void;
   onEdit: (slideId: string, editedContent: string) => void;
+  onReset?: (slideId: string) => void;
 }
 
 const statusLabel = (status: Slide['status']) =>
@@ -25,6 +26,7 @@ const SlideComparison: React.FC<SlideComparisonProps> = ({
   onApprove,
   onReject,
   onEdit,
+  onReset,
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [draft, setDraft] = useState('');
@@ -146,6 +148,16 @@ const SlideComparison: React.FC<SlideComparisonProps> = ({
         )}
 
         <div className="flex justify-end gap-3 mt-6">
+          {onReset && slide.status !== 'pending' && !isEditing && (
+            <Button
+              variant="ghost"
+              onClick={() => onReset(slide.id)}
+              className="text-gray-600 hover:text-gray-900"
+            >
+              <RotateCcw className="h-4 w-4 mr-2" />
+              Reset review
+            </Button>
+          )}
           <Button
             variant="outline"
             onClick={() => onReject(slide.id)}
@@ -159,7 +171,7 @@ const SlideComparison: React.FC<SlideComparisonProps> = ({
             variant="outline"
             onClick={startEditing}
             className="text-blue-700 border border-blue-300"
-            disabled={(slide.status !== 'pending' && slide.status !== 'modified') || isEditing}
+            disabled={isEditing}
           >
             <Pencil className="h-4 w-4 mr-2" />
             Edit

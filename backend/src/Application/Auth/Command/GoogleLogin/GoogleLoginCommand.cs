@@ -1,5 +1,6 @@
-﻿using System.IdentityModel.Tokens.Jwt;
+﻿using Google.Apis.Auth;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Configuration;
 using PPTRevive.Application.Common.Behaviours;
 using PPTRevive.Application.Common.Contracts;
 using PPTRevive.Application.Common.Interfaces;
@@ -36,7 +37,8 @@ public class GoogleLoginCommandHandler(
     ITokenRepository tokenRepository,
     IQueryRepository<AuthPolicyModel> authPolicyRepository,
     IDataRepository<LoginAttempts> loginAttemptsRepository,
-    IUnitOfWork unitOfWork
+    IUnitOfWork unitOfWork,
+    IConfiguration configuration
 ) : IRequestHandler<GoogleLoginCommand, ResponseBase>
 {
 
@@ -59,34 +61,56 @@ public class GoogleLoginCommandHandler(
                                                     (int)AppMessage.EmailOrPasswordIsIncorrect);
             }
 
-            // Verify the Google ID token
-            var jwtToken = new JwtSecurityToken(request.IdToken);
-            var payload = jwtToken.Payload;
+            // Cryptographically verify the Google ID token: validates signature against
+            // Google's public keys, issuer, expiry, and audience (our OAuth client id).
+            var googleClientId = configuration["GoogleAuth:ClientId"];
+            if (string.IsNullOrWhiteSpace(googleClientId))
+            {
+                return ResponseHelper.ErrorResponse("Google login is not configured on the server.",
+                                                    (int)AppMessage.InvalidGoogleIdToken);
+            }
 
-            if (payload == null)
+            if (string.IsNullOrWhiteSpace(request.IdToken))
             {
                 return ResponseHelper.ErrorResponse(AppMessage.InvalidGoogleIdToken.GetDescription(),
                                                     (int)AppMessage.InvalidGoogleIdToken);
             }
 
-            var email = payload["email"].ToString();
-            if (email != request.Email)
+            GoogleJsonWebSignature.Payload payload;
+            try
             {
-                return ResponseHelper.ErrorResponse(AppMessage.EmailMismatch.GetDescription(),
-                                                    (int)AppMessage.EmailMismatch);
+                payload = await GoogleJsonWebSignature.ValidateAsync(
+                    request.IdToken,
+                    new GoogleJsonWebSignature.ValidationSettings
+                    {
+                        Audience = new[] { googleClientId }
+                    });
+            }
+            catch (InvalidJwtException)
+            {
+                return ResponseHelper.ErrorResponse(AppMessage.InvalidGoogleIdToken.GetDescription(),
+                                                    (int)AppMessage.InvalidGoogleIdToken);
             }
 
-            var user = await userManager.FindByEmailAsync(request.Email);
+            if (!payload.EmailVerified || string.IsNullOrWhiteSpace(payload.Email))
+            {
+                return ResponseHelper.ErrorResponse(AppMessage.InvalidGoogleIdToken.GetDescription(),
+                                                    (int)AppMessage.InvalidGoogleIdToken);
+            }
+
+            // Trust only the validated payload — never the caller-supplied Email.
+            var verifiedEmail = payload.Email;
+            var user = await userManager.FindByEmailAsync(verifiedEmail);
             if (user == null)
             {
                 var newUser = new User
                 {
-                    DisplayName = request.GivenName ?? string.Empty,
-                    UserName = request.Email,
-                    Email = request.Email,
+                    DisplayName = payload.GivenName ?? request.GivenName ?? string.Empty,
+                    UserName = verifiedEmail,
+                    Email = verifiedEmail,
                     EmailConfirmed = true,
                     FirstName = string.Empty,
-                    LastName = request.FamilyName ?? string.Empty,
+                    LastName = payload.FamilyName ?? request.FamilyName ?? string.Empty,
                     //PhoneNumber = "03XXXXXXXXX",
                     UserTypeId = 2,// (int)UserType.User,
                     AuthKey = TypeExtensions.GenerateRandomPassword(),
@@ -110,7 +134,8 @@ public class GoogleLoginCommandHandler(
                     SocialApp = request.SocialLogin,
                 };
 
-                var userCreateResult = await identityService.CreateUserAsync(newUser, "Asdf@1234");
+                // Social accounts never authenticate by password; assign a random one.
+                var userCreateResult = await identityService.CreateUserAsync(newUser, TypeExtensions.GenerateRandomPassword());
 
                 if (!userCreateResult.Result.Succeeded)
                     return ResponseHelper.ErrorResponse(userCreateResult.Result.Errors[0],

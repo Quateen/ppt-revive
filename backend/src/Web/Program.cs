@@ -167,7 +167,11 @@ app.Map("/", () => Results.Redirect("/swagger/index.html"));
 //app.MapEndpoints();
 app.MapControllers();
 
-app.UseHangfireDashboard("/hangfire");
+// The Hangfire dashboard is developer tooling only; never expose it in production.
+if (app.Environment.IsDevelopment())
+{
+    app.UseHangfireDashboard("/hangfire");
+}
 
 using (var scope = app.Services.CreateScope())
 {

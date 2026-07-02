@@ -12,5 +12,9 @@ public class AnalysisResult
     [JsonPropertyName("source")]
     public string Source { get; set; } = string.Empty;
 
-    public List<SlideTextItem> ParsedItems { get; set; } = new();  
+    public List<SlideTextItem> ParsedItems { get; set; } = new();
+
+    // False when the Claude call or JSON parsing failed; callers must keep the
+    // original slide content and must NOT surface Explanation to end users.
+    public bool Success { get; set; } = true;
 }

@@ -47,7 +47,8 @@ public class ErrorHandlingMiddleware
                 {
                     Status = false,
                     Message = HttpStatusCode.NotFound.ToReadableString(),
-                    Error = exception.Message
+                    // Raw exception detail is only exposed outside production.
+                    Error = _env.IsProduction() ? "The requested resource was not found." : exception.Message
                 };
             break;
 
@@ -57,10 +58,11 @@ public class ErrorHandlingMiddleware
                 {
                     Status = false,
                     Message = HttpStatusCode.InternalServerError.ToReadableString(),
-                    Error = exception.Message
+                    Error = _env.IsProduction() ? "An unexpected error occurred. Please try again." : exception.Message
                 };
             break;
 
+            // Validation messages are user-facing and safe to return in all environments.
             case ValidationException validationEx:
                 context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
                 response = new ResponseBase
@@ -71,12 +73,6 @@ public class ErrorHandlingMiddleware
                 };
                 break;
         }
-
-        // show error only in development env.
-        //if (_env.IsDevelopment())
-        //{
-        //    response.ExceptionResponse(exception);
-        //}
 
         var jsonResponse = JsonConvert.SerializeObject(response);
         return context.Response.WriteAsync(jsonResponse);

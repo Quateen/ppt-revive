@@ -81,6 +81,8 @@ npm run dev
 | `Cors:AllowedOrigins` | Frontend origins allowed to call the API | localhost |
 | `FileUploadSettings:MaxFileSizeMB` | Upload size cap | `5` |
 | `Jwt:AdminSecretKey` / `Jwt:SecretKey` | JWT signing keys (required, app refuses to start without) | — |
+| `Smtp:Host` / `Port` / `Username` / `Password` / `UseSSL` | SMTP for registration OTP & password-reset email | — |
+| `GoogleAuth:ClientId` | Google OAuth client id; required to allow Google login (tokens are validated against it) | — |
 
 ## Adding Scopus later
 

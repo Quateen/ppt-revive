@@ -17,12 +17,14 @@ public class PPTStartProcessingHandler : IRequestHandler<PPTStartProcessingComma
     private readonly IMemoryCache _cache;
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly IFileService _fileService;
+    private readonly IUser _currentUser;
 
-    public PPTStartProcessingHandler(IMemoryCache cache, IServiceScopeFactory scopeFactory, IFileService fileService)
+    public PPTStartProcessingHandler(IMemoryCache cache, IServiceScopeFactory scopeFactory, IFileService fileService, IUser currentUser)
     {
         _cache = cache;
         _scopeFactory = scopeFactory;
         _fileService = fileService;
+        _currentUser = currentUser;
     }
 
     private ResponseBase ErrorResponse(string error)
@@ -38,7 +40,8 @@ public class PPTStartProcessingHandler : IRequestHandler<PPTStartProcessingComma
     {
         try
         {
-            if (!_cache.TryGetValue(request.JobId.ToString(), out ProcessingResult? result) || result == null)
+            if (!_cache.TryGetValue(request.JobId.ToString(), out ProcessingResult? result) || result == null
+                || result.OwnerUserId != _currentUser.Id)
             {
                 return new ResponseBase
                 {
@@ -54,7 +57,9 @@ public class PPTStartProcessingHandler : IRequestHandler<PPTStartProcessingComma
             var processingResult = await Task.FromResult(result);
             var pptBytes = await _fileService.ReadFileAsBytesAsync(processingResult.FileName, PPTDirectories.ORIGNAL_PPT);
 
-            // Start background processing
+            // Start background processing. Preserve FileName and OwnerUserId across every
+            // cache write so later status/finalize lookups still resolve the job.
+            var ownerUserId = processingResult.OwnerUserId;
             _ = Task.Run(async () =>
             {
                 try
@@ -62,6 +67,8 @@ public class PPTStartProcessingHandler : IRequestHandler<PPTStartProcessingComma
                     _cache.Set(request.JobId.ToString(), new ProcessingResult
                     {
                         Status = ProcessingStatus.InProgress,
+                        FileName = processingResult.FileName,
+                        OwnerUserId = ownerUserId,
                     }, TimeSpan.FromHours(2));
 
                     using var scope = _scopeFactory.CreateScope();
@@ -70,8 +77,12 @@ public class PPTStartProcessingHandler : IRequestHandler<PPTStartProcessingComma
 
                     _cache.Set(request.JobId.ToString(), new ProcessingResult
                     {
-                        Status = ProcessingStatus.Completed,
-                        Result = result.Data
+                        // A handler-level failure must be recorded as Failed, not Completed.
+                        Status = result.Status ? ProcessingStatus.Completed : ProcessingStatus.Failed,
+                        Result = result.Status ? result.Data : null,
+                        Error = result.Status ? null : result.Error?.ToString(),
+                        FileName = processingResult.FileName,
+                        OwnerUserId = ownerUserId,
                     }, TimeSpan.FromHours(2));
                 }
                 catch (Exception ex)
@@ -79,7 +90,9 @@ public class PPTStartProcessingHandler : IRequestHandler<PPTStartProcessingComma
                     _cache.Set(request.JobId.ToString(), new ProcessingResult
                     {
                         Status = ProcessingStatus.Failed,
-                        Error = ex.Message
+                        Error = ex.Message,
+                        FileName = processingResult.FileName,
+                        OwnerUserId = ownerUserId,
                     }, TimeSpan.FromHours(2));
                 }
             });

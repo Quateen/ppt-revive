@@ -10,8 +10,9 @@ import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/components/ui/use-toast';
 import { Presentation, Slide, Reference } from '@/types/presentation';
 import { useAppDispatch, useAppSelector } from '@/hooks/reduxHooks';
-import { selectFinalizedSlidesStatus, selectPresentatiionDetialsStatus, selectUploadPresentationStatus, setSlideEditedContent } from '@/app-redux/presentation/presentationSlice';
+import { selectFinalizedSlidesStatus, selectPresentatiionDetialsStatus, selectUploadPresentationStatus } from '@/app-redux/presentation/presentationSlice';
 import { finalizeSlidesAction } from '@/app-redux/presentation/presentationAction';
+import { getCurrentUser } from '@/common/utils/userAttribs4mLocalStorage';
 import { useLocation } from 'react-router-dom';
 
 
@@ -34,7 +35,12 @@ const PresentationAnalyzer = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    if (details === undefined) return; // wait for details to exist
+    // Build the local `presentation` only ONCE. `details` (the Redux
+    // presentationStatusResponse) gets a new reference whenever any part of it
+    // is mutated, so re-running this effect would wipe the user's approve/
+    // reject/edit choices. Review state lives in local state on purpose.
+    if (presentation) return;
+    if (!details) return; // wait for details to exist
 
     const result = details?.result;
 
@@ -111,8 +117,7 @@ const PresentationAnalyzer = () => {
 
   const handleApprove = (slideNumber: number) => {
     setIsDirty(true);
-    // Approving as-is discards any saved edit for this slide
-    dispatch(setSlideEditedContent({ slideId: slideNumber, editedContent: null }));
+    // Approving as-is discards any saved edit for this slide (kept in local state)
     setPresentation(prev => {
       if (!prev) return null;
       const updatedSlides: Slide[] = prev.slides.map(slide =>
@@ -132,8 +137,8 @@ const PresentationAnalyzer = () => {
 
   const handleEdit = (slideNumber: number, editedContent: string) => {
     setIsDirty(true);
-    // Keep the edited text in Redux so it is part of app state, not just local UI state
-    dispatch(setSlideEditedContent({ slideId: slideNumber, editedContent }));
+    // Keep the edited text in local review state so rebuilds of `presentation`
+    // (driven by Redux `details`) don't clobber it.
     setPresentation(prev => {
       if (!prev) return null;
       const updatedSlides: Slide[] = prev.slides.map(slide =>
@@ -172,8 +177,7 @@ const PresentationAnalyzer = () => {
 
   const handleReject = (slideNumber: number) => {
     setIsDirty(true);
-    // Rejecting discards any saved edit for this slide
-    dispatch(setSlideEditedContent({ slideId: slideNumber, editedContent: null }));
+    // Rejecting discards any saved edit for this slide (kept in local state)
     setPresentation(prev => {
       if (!prev) return null;
       const updatedSlides: Slide[] = prev.slides.map(slide =>
@@ -252,10 +256,14 @@ const PresentationAnalyzer = () => {
       await dispatch(finalizeSlidesAction(finalizePayload)).unwrap();
     } catch (error) {
       console.error("Finalize failed:", error);
+      const apiError = error as { message?: string; error?: string } | undefined;
       toast({
         variant: "destructive",
         title: "Finalize Error",
-        description: "Failed to generate updated presentation.",
+        description:
+          apiError?.message ||
+          apiError?.error ||
+          "Failed to generate updated presentation.",
       });
     } finally {
       setGenerating(false); // ✅ Stop loader
@@ -273,8 +281,6 @@ const PresentationAnalyzer = () => {
     return () => window.removeEventListener('beforeunload', handler);
   }, [isDirty, generating]);
 
-  // usePrompt(isDirty || generating);
-
 
   useEffect(() => {
     const downloadFinalizedFile = async () => {
@@ -283,9 +289,13 @@ const PresentationAnalyzer = () => {
       try {
         setGenerating(true);
         const filePath = finalizedSlides.newFilePath;
-        const fileName = filePath.split('/').pop() || 'UpdatedPresentation.pptx';
+        const fileName = 'UpdatedPresentation.pptx';
 
-        const response = await fetch(AppConfig.API_BASE_URL + filePath);
+        // The download endpoint is authenticated; send the bearer token.
+        const user = getCurrentUser<{ accessToken?: string }>(AppConfig.STORAGE_KEY);
+        const response = await fetch(AppConfig.API_BASE_URL + filePath, {
+          headers: user?.accessToken ? { Authorization: `Bearer ${user.accessToken}` } : undefined,
+        });
         if (!response.ok) throw new Error("Failed to fetch finalized file");
 
         const blob = await response.blob();
@@ -344,6 +354,7 @@ const PresentationAnalyzer = () => {
               onApprove={() => handleApprove(currentSlide.number)}
               onReject={() => handleReject(currentSlide.number)}
               onEdit={(_slideId, editedContent) => handleEdit(currentSlide.number, editedContent)}
+              onReset={() => handleReset(currentSlide.id)}
             />
           )}
           <div ref={generateButtonRef} className="mt-4 flex justify-center">

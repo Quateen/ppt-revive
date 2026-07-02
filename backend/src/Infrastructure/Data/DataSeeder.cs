@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using MySqlConnector;
 using PPTRevive.Domain.Common;
 using PPTRevive.Domain.Entities;
@@ -12,14 +13,17 @@ public class DataSeeder
 {
     private readonly ApplicationDbContext _dbContext;
     private readonly UserManager<User> _userManager;
+    private readonly IConfiguration _configuration;
 
     public DataSeeder(
         ApplicationDbContext dbContext,
-        UserManager<User> userManager
+        UserManager<User> userManager,
+        IConfiguration configuration
     )
     {
         _dbContext = dbContext;
         _userManager = userManager;
+        _configuration = configuration;
     }
 
     public void Seed()
@@ -124,7 +128,16 @@ public class DataSeeder
             LastModified = DateTime.UtcNow,
         };
 
-        var result = _userManager.CreateAsync(user, "Asdf@1234").GetAwaiter().GetResult();
+        // Seed the admin with a configured password, or a strong random one that is
+        // logged once for first-login rotation — never a hardcoded default.
+        var seedPassword = _configuration["Seed:AdminPassword"];
+        if (string.IsNullOrWhiteSpace(seedPassword))
+        {
+            seedPassword = TypeExtensions.GenerateRandomPassword();
+            Console.WriteLine($"[Seed] Generated admin password for {email}: {seedPassword} — change it after first login.");
+        }
+
+        var result = _userManager.CreateAsync(user, seedPassword).GetAwaiter().GetResult();
 
         if (result.Succeeded)
         {

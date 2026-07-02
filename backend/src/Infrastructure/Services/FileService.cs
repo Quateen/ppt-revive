@@ -1,34 +1,36 @@
-﻿using PPTRevive.Application.Common.Interfaces;
+using PPTRevive.Application.Common.Interfaces;
 using PPTRevive.Domain.Constants;
 
 namespace PPTRevive.Infrastructure.Services;
 
 public class FileService : IFileService
 {
+    // Uploaded originals and finalized decks live OUTSIDE wwwroot so the static-file
+    // middleware never serves them; they are only reachable through the authenticated
+    // download endpoint after an ownership check.
+    private static string StorageRoot => Path.Combine(Directory.GetCurrentDirectory(), "ppt-storage");
+
     public async Task<string> SaveFile(string fileName, byte[] pptUpdated, string dirName)
     {
-        var wwwRootPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
-        var saveDirectory = Path.Combine(wwwRootPath, dirName);
-        // Ensure the directory exists
+        var saveDirectory = Path.Combine(StorageRoot, dirName);
         Directory.CreateDirectory(saveDirectory);
 
-        var filePath = Path.Combine(saveDirectory, fileName);
+        var safeName = Path.GetFileName(fileName); // strip any path components
+        var filePath = Path.Combine(saveDirectory, safeName);
 
         await File.WriteAllBytesAsync(filePath, pptUpdated);
 
-        // Make relative path (e.g., "updated-ppts/xyz_Updated_file.pptx")
-        var relativePath = Path.GetRelativePath(wwwRootPath, filePath).Replace("\\", "/");
-        var fileUrl = $"/{relativePath}";
-        return fileUrl;
+        var relativePath = Path.GetRelativePath(StorageRoot, filePath).Replace("\\", "/");
+        return $"/{relativePath}";
     }
 
     public async Task<byte[]> ReadFileAsBytesAsync(string fileName, string dirName)
     {
-        var wwwRootPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
-        var filePath = Path.Combine(wwwRootPath, dirName, fileName);
+        var safeName = Path.GetFileName(fileName); // prevent path traversal
+        var filePath = Path.Combine(StorageRoot, dirName, safeName);
 
         if (!File.Exists(filePath))
-            throw new FileNotFoundException($"The file '{fileName}' was not found in directory '{dirName}'.");
+            throw new FileNotFoundException($"The file '{safeName}' was not found in directory '{dirName}'.");
 
         return await File.ReadAllBytesAsync(filePath);
     }
@@ -37,23 +39,17 @@ public class FileService : IFileService
     {
         try
         {
-            var wwwRootPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
-            var folderPath = Path.Combine(wwwRootPath, dirName);
+            var folderPath = Path.Combine(StorageRoot, dirName);
+            if (!Directory.Exists(folderPath))
+                return;
 
-            if (Directory.Exists(folderPath))
+            // Only remove files older than the job TTL so an in-flight job's files
+            // are never deleted out from under it.
+            var cutoff = DateTime.UtcNow.AddHours(-3);
+            foreach (var file in Directory.GetFiles(folderPath))
             {
-                string[] files = Directory.GetFiles(folderPath);
-
-                foreach (string file in files)
-                {
+                if (File.GetLastWriteTimeUtc(file) < cutoff)
                     File.Delete(file);
-                }
-
-                Console.WriteLine("All files deleted successfully.");
-            }
-            else
-            {
-                Console.WriteLine("Folder does not exist.");
             }
         }
         catch (Exception ex)
@@ -67,5 +63,4 @@ public class FileService : IFileService
         DeleteFilesFromFolder(PPTDirectories.ORIGNAL_PPT);
         DeleteFilesFromFolder(PPTDirectories.UPDATED_PPT);
     }
-
 }

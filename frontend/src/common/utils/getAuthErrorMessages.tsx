@@ -15,13 +15,14 @@ export const getErrorMessages = (
   }
 
   // ✅ Case 3: error.error is an object with { error: string }
+  const nestedError: unknown = error.error;
   if (
-    typeof error.error === 'object' &&
-    error.error !== null &&
-    'error' in error.error &&
-    typeof (error.error as { error?: string }).error === 'string'
+    nestedError != null &&
+    typeof nestedError === 'object' &&
+    'error' in nestedError &&
+    typeof (nestedError as { error?: string }).error === 'string'
   ) {
-    return [(error.error as { error: string }).error];
+    return [(nestedError as { error: string }).error];
   }
 
   // Case 4: fallback to top-level message

@@ -16,7 +16,8 @@ const handleError = (err: unknown): ApiResponse => {
     const apiError = err.response?.data;
     const statusCode = err?.response?.status;
     return {
-      message: apiError?.message || "Something went wrong",
+      // Backend ResponseBase returns failure text in `error`, not `message`.
+      message: apiError?.message || apiError?.error || "Something went wrong",
       error: apiError?.error || null,
       status: false,
       statusCode: statusCode
