@@ -1,73 +1,101 @@
-# Welcome to your Lovable project
+# PPT Revive v2
 
-## Project info
+AI-powered medical presentation updater. Upload an old medical PowerPoint, let Claude analyze each slide against current PubMed literature, review every suggested update side-by-side (approve / reject / **edit**), and download a refreshed `.pptx` with a compiled references slide for the approved changes.
 
-**URL**: https://lovable.dev/projects/7921cca6-33e8-46d0-8f3b-cc6bb86cc943
+This is a monorepo combining a hardened version of the original `PPT-revive-backend-claude` (.NET 8) and `PPT-revive-frontend-claude` (React + Vite) repositories. **The original repositories were not modified.**
 
-## How can I edit this code?
+```
+ppt-revive-v2/
+├── backend/    ASP.NET Core 8 API — PPTX parsing (OpenXML), Claude analysis,
+│               PubMed search, slide regeneration, JWT auth, MySQL
+└── frontend/   React 18 + Vite + Redux Toolkit — upload, side-by-side review,
+                approve/reject/edit, references list, download
+```
 
-There are several ways of editing your application.
+## How the pipeline works
 
-**Use Lovable**
+1. **Upload** (`POST /api/ppt/upload`) — validates a `.pptx` (max 5 MB), stores it, returns a `jobId`.
+2. **Analyze** (`GET /api/ppt/start`, polled via `GET /api/ppt/status`) — for each slide (3 in parallel by default):
+   - Claude extracts the key medical terms from the slide text.
+   - Those terms are searched on **PubMed** (NCBI E-utilities, rate-limit aware); up to 8 real articles with PMID/DOI/links are retrieved.
+   - Claude rewrites the slide lines **using only the retrieved abstracts** (structured-output JSON, numeric-integrity guard against invented statistics).
+3. **Review** — the frontend shows original vs. suggested content per slide with the reason for the change and its citations. The user approves, rejects, or edits each slide.
+4. **Finalize** (`POST /api/ppt/finalize-slides`) — approved/edited text is written back into the *original* PPTX in place (bullet levels and run formatting preserved; images/layout untouched), reference slides are appended containing the citations of approved slides (with live hyperlinks), and a per-job output file `{jobId}-revived.pptx` is produced for download.
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/7921cca6-33e8-46d0-8f3b-cc6bb86cc943) and start prompting.
+## What was fixed vs. the original repositories
 
-Changes made via Lovable will be committed automatically to this repo.
+- **Compile error** in `PubMedRepository.CleanJsonResponse` (stray character + missing semicolon) — the previous backend HEAD did not build.
+- **Secrets scrubbed**: the original repo committed live OpenAI/Gemini/PubMed keys, a MySQL password, and JWT secrets in `appsettings*.json`. All are now empty and must be supplied via environment variables. **Rotate the old keys — they remain in the old repo's git history.**
+- **Claude integration modernized**: model is configurable (`Claude:Model`, default `claude-opus-4-8`); responses use **structured outputs** (JSON schema) instead of regex-cleaning free-form text; removed sampling parameters that current models reject.
+- **Concurrent-user bug**: finalized decks were all written to one shared filename — now per-job.
+- **PubMed search quality**: the hardcoded `"OR bone fractures OR …"` orthopedic enrichment is gone; the Claude-extracted key terms are now actually used as the query (previously extracted and discarded).
+- **Per-slide citations**: each slide now carries only its own supporting articles (previously a shared, growing list was attached to every slide), and the final references slides include only citations from approved slides.
+- **Bounded parallelism + thread-safe collections** in slide processing (configurable via `Processing:MaxParallelSlides`).
+- **Edit feature implemented end-to-end**: the UI's Edit button (previously commented out) lets the user modify the suggested text; `finalize-slides` accepts `editedContent` per slide.
+- **Browser-side AI removed**: the frontend no longer bundles Anthropic/OpenAI SDK calls or `VITE_*_API_KEY` variables — all AI/PubMed traffic goes through the backend.
+- **CORS origins** moved from hardcoded values into configuration.
+- Abandoned GPT-4 regenerate endpoint rewritten to use Claude; dead code and duplicate files removed; vulnerable AutoMapper upgraded.
 
-**Use your preferred IDE**
+## Going live
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+See **[DEPLOYMENT.md](DEPLOYMENT.md)** — a single `docker compose up -d --build` on a small VM brings up MySQL, the API, the frontend, and automatic HTTPS via Caddy.
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+## Running locally
 
-Follow these steps:
+### Backend (`backend/`)
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+Requirements: .NET 8 SDK, MySQL 8.
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+```bash
+cd backend
+# Configuration via environment variables (double underscore = section separator):
+export ConnectionStrings__DefaultConnection="server=127.0.0.1;port=3306;user=root;password=...;database=ppt_revive;Connection Timeout=60;Allow User Variables=True;"
+export Jwt__AdminSecretKey="<generate a long random string>"
+export Jwt__SecretKey="<generate a long random string>"
+export Claude__ApiKey="sk-ant-..."
+export PubMed__ApiKey="<NCBI API key>"   # free: https://www.ncbi.nlm.nih.gov/account/
+dotnet run --project src/Web
+```
 
-# Step 3: Install the necessary dependencies.
-npm i
+Swagger UI is served at `/swagger`. The schema in `migration 18-06-25.sql` seeds the user/role/subscription tables.
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+### Frontend (`frontend/`)
+
+Requirements: Node 18+.
+
+```bash
+cd frontend
+cp .env.example .env    # set VITE_API_BASE_URL to the backend URL
+npm install
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+## Configuration reference (backend)
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+| Key | Purpose | Default |
+|---|---|---|
+| `Claude:ApiKey` | Anthropic API key (required) | — |
+| `Claude:Model` | Claude model for analysis & keyword extraction | `claude-opus-4-8` |
+| `PubMed:ApiKey` | NCBI E-utilities key (raises rate limit to 10 req/s) | — |
+| `Processing:MaxParallelSlides` | Concurrent slide analyses per job | `3` |
+| `Cors:AllowedOrigins` | Frontend origins allowed to call the API | localhost |
+| `FileUploadSettings:MaxFileSizeMB` | Upload size cap | `5` |
+| `Jwt:AdminSecretKey` / `Jwt:SecretKey` | JWT signing keys (required, app refuses to start without) | — |
+| `Smtp:Host` / `Port` / `Username` / `Password` / `UseSSL` | SMTP for registration OTP & password-reset email | — |
+| `GoogleAuth:ClientId` | Google OAuth client id; required to allow Google login (tokens are validated against it) | — |
 
-**Use GitHub Codespaces**
+## Adding Scopus later
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+Literature search is encapsulated in `backend/src/Infrastructure/Repositories/PubMedRepository.cs` behind the `IPubMedRepository` interface (`SearchRelevantArticlesAsync`). To add Scopus, implement an equivalent search against the Elsevier API (`https://api.elsevier.com/content/search/scopus`, requires an institutional API key), merge its results into the article list passed to `AnalyzeMedicalSlideAsync`, and include the Scopus EID/DOI link in the citation line. No frontend change is needed — citations flow through the same `references` field.
 
-## What technologies are used for this project?
+## Known limitations / next steps
 
-This project is built with:
+- **Job state lives in an in-memory cache (2 h TTL)** — an app restart loses in-flight jobs. Replace with a database-backed job table (Hangfire is already wired) before scaling beyond one instance.
+- Slide regeneration is text-only: images, charts, and complex layouts are preserved as-is but not analyzed. Claude vision analysis of slide images is a natural next step.
+- Reference slides use a simple generated layout rather than the deck's theme.
+- Theme switching for the output deck is not yet implemented.
+- Test suite still covers only legacy scaffolding; the PPT pipeline has no automated tests yet.
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+## Medical disclaimer
 
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/7921cca6-33e8-46d0-8f3b-cc6bb86cc943) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes it is!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+Suggested updates are AI-generated from retrieved literature and must be verified by a qualified medical professional before use. Every suggestion links to its source (PubMed PMID/DOI) for verification. Avoid uploading presentations containing patient-identifiable information.

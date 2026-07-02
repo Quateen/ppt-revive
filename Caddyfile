@@ -1,0 +1,10 @@
+# Caddy obtains and renews Let's Encrypt certificates automatically,
+# as long as both domains' DNS A records point at this server.
+
+{$APP_DOMAIN} {
+    reverse_proxy frontend:80
+}
+
+{$API_DOMAIN} {
+    reverse_proxy backend:80
+}
