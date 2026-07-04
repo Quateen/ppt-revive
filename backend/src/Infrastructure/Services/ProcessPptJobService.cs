@@ -38,11 +38,11 @@ public class ProcessPptJobService : IProcessPptJobService
         };
     }
 
-    public async Task<ResponseBase> ProcessAsync(byte[] pptBytes, string fileName, CancellationToken cancellationToken)
+    public async Task<ResponseBase> ProcessAsync(byte[] pptBytes, string fileName, CancellationToken cancellationToken, IProgress<(int Processed, int Total)>? progress = null)
     {
         try
         {
-            var slideResponses = await ParseAndAnalyzeSlidesAsync(pptBytes);
+            var slideResponses = await ParseAndAnalyzeSlidesAsync(pptBytes, progress);
             if (slideResponses.Count == 0)
                 return ErrorResponse("No valid slides found or processed.");
 
@@ -96,7 +96,7 @@ public class ProcessPptJobService : IProcessPptJobService
         public List<SlideTextItem> Items { get; init; } = new();
     }
 
-    private async Task<List<SlidePagesResponse>> ParseAndAnalyzeSlidesAsync(byte[] pptBytes)
+    private async Task<List<SlidePagesResponse>> ParseAndAnalyzeSlidesAsync(byte[] pptBytes, IProgress<(int Processed, int Total)>? progress = null)
     {
         // ---- Phase 1: extract every slide's text SEQUENTIALLY (OpenXML is not thread-safe) ----
         var extracts = new List<SlideExtract>();
@@ -190,6 +190,10 @@ public class ProcessPptJobService : IProcessPptJobService
         using var semaphore = new SemaphoreSlim(maxParallelSlides);
         var results = new System.Collections.Concurrent.ConcurrentBag<SlidePagesResponse>();
 
+        int totalSlides = extracts.Count;
+        int processedSlides = 0;
+        progress?.Report((0, totalSlides));
+
         var tasks = extracts.Select(async extract =>
         {
             await semaphore.WaitAsync();
@@ -243,6 +247,7 @@ public class ProcessPptJobService : IProcessPptJobService
 
                 // On analysis failure, keep the original content so the slide is never lost.
                 string updatedContent;
+                List<SlideTextItem> structuredItems = new();
                 if (analysisResult.Success)
                 {
                     var updatedItems = analysisResult.ParsedItems ?? new();
@@ -252,9 +257,12 @@ public class ProcessPptJobService : IProcessPptJobService
                             .Where(item => !item.Text.Trim().Equals(extract.TitleText!.Trim(), StringComparison.OrdinalIgnoreCase))
                             .ToList();
                     }
-                    updatedContent = string.Join("\n",
-                        updatedItems.Where(item => item.SlideIndex == extract.SlideIndex && !string.IsNullOrWhiteSpace(item.Text))
-                                    .Select(u => u.Text));
+                    // Structured list (per shape/paragraph) drives faithful in-place
+                    // rewriting on finalize; the flat string is for the review UI.
+                    structuredItems = updatedItems
+                        .Where(item => item.SlideIndex == extract.SlideIndex && !string.IsNullOrWhiteSpace(item.Text))
+                        .ToList();
+                    updatedContent = string.Join("\n", structuredItems.Select(u => u.Text));
                 }
                 else
                 {
@@ -266,6 +274,7 @@ public class ProcessPptJobService : IProcessPptJobService
                     SlideId = extract.SlideNo,
                     OriginalSlideContent = extract.OriginalText,
                     UpdatedSlideContent = updatedContent,
+                    UpdatedItems = structuredItems,
                     TitleText = extract.TitleText,
                     References = slideReferences,
                     Explanation = analysisResult.Success ? analysisResult.Explanation : "Automatic update unavailable for this slide; original content kept.",
@@ -289,6 +298,8 @@ public class ProcessPptJobService : IProcessPptJobService
             }
             finally
             {
+                var done = System.Threading.Interlocked.Increment(ref processedSlides);
+                progress?.Report((done, totalSlides));
                 semaphore.Release();
             }
         }).ToList();

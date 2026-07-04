@@ -67,6 +67,9 @@ export interface GetPptStatusData {
   status: number;
   result: PresentationResult | null;
   error: string | null;
+  // Live per-slide progress while status is InProgress.
+  totalSlides?: number;
+  processedSlides?: number;
 }
 
 export interface PptStartProcessingData {

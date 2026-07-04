@@ -113,19 +113,35 @@ public class FinalizeApprovedSlidesHandler : IRequestHandler<PPTApproveCommand, 
                 if (slideData == null)
                     continue;
 
-                var contentToApply = !string.IsNullOrWhiteSpace(slideRequest.EditedContent)
-                    ? slideRequest.EditedContent
-                    : slideData.UpdatedSlideContent;
-                if (string.IsNullOrWhiteSpace(contentToApply))
-                    continue;
-
                 var slideIndex = slideRequest.Id - 1;
                 if (slideIndex < 0 || slideIndex >= slidePartsOrdered.Count)
                     continue;
 
                 var slidePart = slidePartsOrdered[slideIndex];
 
-                UpdateSlideContent(slidePart, contentToApply);
+                if (!string.IsNullOrWhiteSpace(slideRequest.EditedContent))
+                {
+                    // The physician typed free text over the combined suggestion; we can't
+                    // re-map an arbitrary blob to individual shapes, so apply it to the main
+                    // content shape (best effort) and leave other shapes untouched.
+                    UpdateSlideContent(slidePart, slideRequest.EditedContent);
+                }
+                else if (slideData.UpdatedItems is { Count: > 0 })
+                {
+                    // Faithful path: rewrite each text box's paragraphs in place, matched by
+                    // shape name and paragraph order — no collapsing into one shape.
+                    UpdateSlideContentStructured(slidePart, slideData.UpdatedItems);
+                }
+                else if (!string.IsNullOrWhiteSpace(slideData.UpdatedSlideContent))
+                {
+                    UpdateSlideContent(slidePart, slideData.UpdatedSlideContent);
+                }
+                else
+                {
+                    // Approved but no evidence-based change — leave the slide as the author had it.
+                    continue;
+                }
+
                 RestoreMetaText(slidePart,
 titleText: slideData.TitleText ?? slideData.OriginalSlideContent.Split('\n').FirstOrDefault() ?? "",
                     authorText: ExtractAuthorLine(slideData.OriginalSlideContent));
@@ -168,6 +184,78 @@ titleText: slideData.TitleText ?? slideData.OriginalSlideContent.Split('\n').Fir
                 NewFilePath = $"/api/ppt/download?jobId={request.Id}",
             }
         };
+    }
+
+    // Faithful in-place rewrite: match updated lines back to their ORIGINAL shape and
+    // paragraph (by shape name + paragraph order) and replace only the text, preserving
+    // every text box, bullet level, and run formatting. This is the fix for multi-textbox
+    // slides being collapsed into one shape and for overflow bullets running together.
+    private void UpdateSlideContentStructured(SlidePart slidePart, List<SlideTextItem> items)
+    {
+        if (items == null || items.Count == 0) return;
+
+        // Per shape-name queue of updated lines, in original order.
+        var byShape = items
+            .GroupBy(i => i.ShapeName ?? string.Empty)
+            .ToDictionary(g => g.Key, g => new Queue<SlideTextItem>(g));
+
+        bool anyApplied = false;
+
+        foreach (var shape in slidePart.Slide.Descendants<ShapeModel>())
+        {
+            var shapeName = shape.NonVisualShapeProperties?.NonVisualDrawingProperties?.Name?.Value ?? string.Empty;
+            if (shapeName.ToLower().Contains("title")) continue;       // never touch the title
+            if (shape.TextBody == null) continue;
+            if (!byShape.TryGetValue(shapeName, out var queue) || queue.Count == 0) continue;
+
+            foreach (var para in shape.TextBody.Elements<A.Paragraph>())
+            {
+                // Only paragraphs that originally had text were extracted as items, so
+                // align to those and skip empty/spacer paragraphs.
+                bool hasText = para.Descendants<A.Text>().Any(t => !string.IsNullOrWhiteSpace(t.Text));
+                if (!hasText) continue;
+                if (queue.Count == 0) break;
+
+                var item = queue.Dequeue();
+                SetParagraphText(para, item.Text);
+                anyApplied = true;
+            }
+        }
+
+        // If shape names didn't line up (rare), fall back to the flat updater so the
+        // approved content is never silently dropped.
+        if (!anyApplied)
+        {
+            UpdateSlideContent(slidePart, string.Join("\n", items.Select(i => i.Text)));
+            return;
+        }
+
+        slidePart.Slide.Save();
+    }
+
+    // Replaces a paragraph's text with newText, preserving the paragraph's properties
+    // (bullet/level) and the first run's formatting; collapses extra runs.
+    private void SetParagraphText(A.Paragraph para, string newText)
+    {
+        var runs = para.Elements<A.Run>().ToList();
+        if (runs.Count == 0)
+        {
+            para.Append(new A.Run(new A.Text(newText)));
+            return;
+        }
+
+        var first = runs[0];
+        var text = first.GetFirstChild<A.Text>();
+        if (text == null)
+        {
+            text = new A.Text();
+            first.Append(text);
+        }
+        text.Text = newText;
+        SetSpacePreservation(text);
+
+        for (int i = 1; i < runs.Count; i++)
+            runs[i].Remove();
     }
 
     private void UpdateSlideContent(SlidePart slidePart, string updatedText)

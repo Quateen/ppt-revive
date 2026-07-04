@@ -71,9 +71,23 @@ public class PPTStartProcessingHandler : IRequestHandler<PPTStartProcessingComma
                         OwnerUserId = ownerUserId,
                     }, TimeSpan.FromHours(2));
 
+                    // Report per-slide progress into the cache so the status poll can drive
+                    // a live progress bar instead of a bare, minutes-long spinner.
+                    var progress = new Progress<(int Processed, int Total)>(p =>
+                    {
+                        _cache.Set(request.JobId.ToString(), new ProcessingResult
+                        {
+                            Status = ProcessingStatus.InProgress,
+                            FileName = processingResult.FileName,
+                            OwnerUserId = ownerUserId,
+                            ProcessedSlides = p.Processed,
+                            TotalSlides = p.Total,
+                        }, TimeSpan.FromHours(2));
+                    });
+
                     using var scope = _scopeFactory.CreateScope();
                     var handler = scope.ServiceProvider.GetRequiredService<IProcessPptJobService>();
-                    var result = await handler.ProcessAsync(pptBytes, processingResult.FileName, cancellationToken);
+                    var result = await handler.ProcessAsync(pptBytes, processingResult.FileName, cancellationToken, progress);
 
                     _cache.Set(request.JobId.ToString(), new ProcessingResult
                     {

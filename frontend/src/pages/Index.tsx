@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import FileUploader from '@/components/FileUploader';
 import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
 import JoinFoundingMembers from '@/components/JoinFoundingMembers';
 import { NucleusMark } from '@/components/BrandLogo';
 import { CircleHelp, FileText, Search, RotateCcw, FileCheck, ShieldCheck, Stethoscope, ArrowRight } from 'lucide-react';
@@ -93,10 +94,10 @@ const Index = () => {
       return;
     }
 
-    // Otherwise keep polling for the job status.
+    // Poll frequently enough that the per-slide progress bar feels live.
     const interval = setInterval(() => {
       dispatch(getPresentationStatusAction({ jobId }));
-    }, 10000); // every 10 seconds
+    }, 4000); // every 4 seconds
 
     return () => clearInterval(interval);
   }, [startStatus?.status, startStatus?.error, jobId, dispatch, details?.status]);
@@ -307,14 +308,33 @@ const Index = () => {
             {uploadedFile && (
               <>
                 {(uploading || analyzing) && (
-                  <div className="mt-6 text-center flex flex-col items-center justify-center" role="status" aria-live="polite">
+                  <div className="mt-6 flex flex-col items-center justify-center" role="status" aria-live="polite">
                     <svg className="animate-spin h-6 w-6 text-primary mb-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" aria-hidden="true">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
                     </svg>
-                    <p className="text-sm text-muted-foreground">
-                      {uploading ? "Uploading your deck. Please wait..." : "Checking each slide against current evidence..."}
-                    </p>
+                    {(() => {
+                      const total = details?.totalSlides ?? 0;
+                      const done = details?.processedSlides ?? 0;
+                      const showBar = analyzing && total > 0;
+                      return (
+                        <div className="w-full max-w-sm text-center">
+                          <p className="text-sm text-muted-foreground mb-2">
+                            {uploading
+                              ? "Uploading your deck. Please wait..."
+                              : showBar
+                                ? `Reviewing slide ${Math.min(done + 1, total)} of ${total} against current evidence...`
+                                : "Checking each slide against current evidence..."}
+                          </p>
+                          {showBar && (
+                            <>
+                              <Progress value={Math.round((done / total) * 100)} className="h-2" />
+                              <p className="text-xs text-muted-foreground mt-1">{done} of {total} slides reviewed</p>
+                            </>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
                 )}
 

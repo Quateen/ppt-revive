@@ -9,6 +9,7 @@ public interface IProcessPptJobService
     /// </summary>
     /// <param name="pptBytes">The byte array content of the uploaded PowerPoint file.</param>
     /// <param name="cancellationToken">Token to handle cancellation.</param>
+    /// <param name="progress">Optional reporter of (processed, total) slides for live UI progress.</param>
     /// <returns>ResponseBase containing updated file and slide data.</returns>
-    Task<ResponseBase> ProcessAsync(byte[] pptBytes, string fileName, CancellationToken cancellationToken);
+    Task<ResponseBase> ProcessAsync(byte[] pptBytes, string fileName, CancellationToken cancellationToken, IProgress<(int Processed, int Total)>? progress = null);
 }
