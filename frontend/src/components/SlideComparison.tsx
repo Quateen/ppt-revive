@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
-import { ThumbsUp, ThumbsDown, Pencil, Check, X, RotateCcw } from 'lucide-react';
+import { ThumbsUp, ThumbsDown, Pencil, Check, X, RotateCcw, CheckCircle2 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Slide } from '@/types/presentation';
 
@@ -42,8 +42,28 @@ const SlideComparison: React.FC<SlideComparisonProps> = ({
   const suggestedUpdate = slide.suggestedUpdate || 'No suggested update available for this slide';
   const displayedUpdate = slide.editedContent ?? suggestedUpdate;
 
+  // Honest "no newer evidence" state: the backend found nothing to change for
+  // this slide (empty suggestion, or a suggestion identical to the original) and
+  // the physician hasn't added their own edit. We show a calm note instead of a
+  // blank/duplicate panel — the slide stays approvable, and approving keeps it
+  // unchanged. We never fabricate a change.
+  const hasUserEdit =
+    slide.editedContent != null && slide.editedContent.trim() !== '';
+  const normalizedOriginal = (slide.originalContent ?? '').trim();
+  const normalizedSuggested = (slide.suggestedUpdate ?? '').trim();
+  const noNewEvidence =
+    !hasUserEdit &&
+    (normalizedSuggested === '' || normalizedSuggested === normalizedOriginal);
+
   const startEditing = () => {
-    setDraft(slide.editedContent ?? slide.suggestedUpdate ?? '');
+    // Seed the editor with the physician's own edit if any, otherwise the
+    // suggested update, otherwise the current (original) content — so a slide
+    // with no suggestion is still editable from a sensible starting point.
+    const seed =
+      slide.editedContent ??
+      (normalizedSuggested !== '' ? slide.suggestedUpdate : slide.originalContent) ??
+      '';
+    setDraft(seed);
     setIsEditing(true);
   };
 
@@ -84,7 +104,9 @@ const SlideComparison: React.FC<SlideComparisonProps> = ({
 
           <div>
             <h3 className="text-sm font-medium text-gray-600 mb-2">
-              Suggested Update{slide.editedContent != null && !isEditing ? ' (edited)' : ''}
+              {noNewEvidence && !isEditing
+                ? 'Suggested Update'
+                : `Suggested Update${slide.editedContent != null && !isEditing ? ' (edited)' : ''}`}
             </h3>
             {isEditing ? (
               <div>
@@ -113,6 +135,15 @@ const SlideComparison: React.FC<SlideComparisonProps> = ({
                     Save
                   </Button>
                 </div>
+              </div>
+            ) : noNewEvidence ? (
+              <div className="bg-green-50 p-4 rounded-md min-h-[200px] text-gray-700 border-2 border-green-200 shadow-inner overflow-auto flex flex-col items-center justify-center text-center">
+                <CheckCircle2 className="h-8 w-8 text-green-600 mb-3" />
+                <p className="font-medium text-gray-800">No newer evidence found for this slide</p>
+                <p className="text-sm mt-1 max-w-xs">
+                  The current content looks up to date. Approving keeps this slide unchanged —
+                  or you can edit it yourself.
+                </p>
               </div>
             ) : (
               <div className="bg-blue-50 p-4 rounded-md min-h-[200px] text-gray-800 whitespace-pre-wrap border-2 border-blue-200 shadow-inner overflow-auto">

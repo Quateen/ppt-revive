@@ -16,6 +16,14 @@ using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Allow real lecture decks: raise the request-body ceiling above the 30 MB default
+// so a 25 MB upload (plus multipart overhead) is accepted.
+builder.WebHost.ConfigureKestrel(o => o.Limits.MaxRequestBodySize = 40L * 1024 * 1024);
+builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(o =>
+{
+    o.MultipartBodyLengthLimit = 40L * 1024 * 1024;
+});
+
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
     ?? new[] { "http://localhost:8080" };
 
@@ -179,17 +187,18 @@ app.UseMiddleware<ErrorHandlingMiddleware>();
 //app.UseCors("AllowOrigins");
 app.UseCors("CorsPolicy");
 
-// Configure the HTTP request pipeline.
-// if (app.Environment.IsDevelopment())
+// Apply schema on startup (idempotent).
+await app.InitialiseDatabaseAsync();
+
+// Swagger and the API-root→Swagger redirect are developer tooling — never expose the
+// API surface docs in production.
+if (app.Environment.IsDevelopment())
 {
-    // TODO: Need to commend if build without migration
-    await app.InitialiseDatabaseAsync();
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-//else
+else
 {
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
 
@@ -202,7 +211,11 @@ app.UseHealthChecks("/health");
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 
-app.Map("/", () => Results.Redirect("/swagger/index.html"));
+// Root: send to Swagger only in development; in production there is nothing to see.
+if (app.Environment.IsDevelopment())
+{
+    app.Map("/", () => Results.Redirect("/swagger/index.html"));
+}
 
 //app.MapEndpoints();
 app.MapControllers();

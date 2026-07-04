@@ -1,8 +1,10 @@
-# PPT Revive v2
+# PPT-Revive by Nucleus Digitalis
 
-AI-powered medical presentation updater. Upload an old medical PowerPoint, let Claude analyze each slide against current PubMed literature, review every suggested update side-by-side (approve / reject / **edit**), and download a refreshed `.pptx` with a compiled references slide for the approved changes.
+The free **lead-magnet** for the Nucleus Digitalis *AI-Enhanced Physician* program. A physician uploads an old medical lecture; Claude checks each slide against current PubMed evidence and proposes cited updates; the physician reviews each one side-by-side (approve / edit / reject) and downloads a refreshed, `NucleusDigitalis.com`-footered `.pptx` — then is invited to join the founding wave.
 
-This is a monorepo combining a hardened version of the original `PPT-revive-backend-claude` (.NET 8) and `PPT-revive-frontend-claude` (React + Vite) repositories. **The original repositories were not modified.**
+**Funnel model:** frictionless free tier (no login) that revives the first **5 slides** of any deck; email captured via the *Join Founding Members* CTA (→ Mailchimp) on the landing page and at the peak-desire moment after download. Voice throughout: physician-led, evidence-based, anti-hype, human-reviewed.
+
+This is a monorepo combining hardened, rebranded versions of the original `PPT-revive-backend-claude` (.NET 8) and `PPT-revive-frontend-claude` (React + Vite) repositories. **The original repositories were not modified.**
 
 ```
 ppt-revive-v2/

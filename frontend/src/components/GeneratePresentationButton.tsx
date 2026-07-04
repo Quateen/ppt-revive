@@ -29,7 +29,12 @@ const GeneratePresentationButton: React.FC<GeneratePresentationButtonProps> = ({
         className="px-8 bg-blue-600 hover:bg-blue-700 flex items-center justify-center"
       >
         {loading ? (
-          <span className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></span>
+          <span
+            role="status"
+            aria-live="polite"
+            aria-label="Generating your updated presentation"
+            className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"
+          ></span>
         ) : (
           <Download className="h-5 w-5 mr-2" />
         )}

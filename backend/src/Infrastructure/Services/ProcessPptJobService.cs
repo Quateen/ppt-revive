@@ -216,6 +216,24 @@ public class ProcessPptJobService : IProcessPptJobService
                 // Search PubMed with the Claude-extracted key terms, not raw slide prose.
                 var keyTerms = await _pubMedRepo.ExtractKeyMedicalTerms(keywordText);
                 var articles = await _pubMedRepo.SearchRelevantArticlesAsync(keyTerms);
+
+                // No supporting literature → do NOT ask the model to invent a change.
+                // Return the slide unchanged with an honest note (physician-trust > edit volume).
+                if (articles.Count == 0)
+                {
+                    results.Add(new SlidePagesResponse
+                    {
+                        SlideId = extract.SlideNo,
+                        OriginalSlideContent = extract.OriginalText,
+                        UpdatedSlideContent = string.Empty,
+                        TitleText = extract.TitleText,
+                        References = new(),
+                        Explanation = "No newer evidence found for this slide — current content appears up to date.",
+                        Source = string.Empty
+                    });
+                    return;
+                }
+
                 var analysisResult = await _pubMedRepo.AnalyzeMedicalSlideAsync(extract.Items, articles);
 
                 var slideReferences = articles

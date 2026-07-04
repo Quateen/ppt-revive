@@ -15,6 +15,7 @@ import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import PublicRoute from "./routes/PublicRoute";
 import PrivateRoute from "./routes/PrivateRoute";
+import ErrorBoundary from "@/components/ErrorBoundary";
 
 const App = () => {
 
@@ -32,7 +33,7 @@ const App = () => {
     };
   }, [dispatch]);
   return (
-    <>
+    <ErrorBoundary>
       <BrowserRouter>
         <Routes>
           {/* ✅ Routes that use Layout */}
@@ -61,7 +62,7 @@ const App = () => {
         </Routes>
       </BrowserRouter>
       <Toaster />
-    </>
+    </ErrorBoundary>
   );
 };
 

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import BrandLogo from '@/components/BrandLogo';
+import MedicalDisclaimer from '@/components/MedicalDisclaimer';
 
 const Footer: React.FC = () => {
   return (
@@ -33,7 +34,11 @@ const Footer: React.FC = () => {
           </div>
         </div>
 
-        <div className="mt-8 border-t border-border pt-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-sm text-muted-foreground">
+        <div className="mt-8 border-t border-border pt-4">
+          <MedicalDisclaimer variant="inline" className="max-w-3xl" />
+        </div>
+
+        <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-sm text-muted-foreground">
           <span>© {new Date().getFullYear()} Nucleus Digitalis. All rights reserved.</span>
           <span>
             A free tool from the{' '}

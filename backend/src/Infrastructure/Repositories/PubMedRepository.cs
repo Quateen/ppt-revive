@@ -220,12 +220,17 @@ public class PubMedRepository : IPubMedRepository
             $"- L{i.SlideIndex}: {ExtractNumbersAsHint(i.Text)}"));
 
         var systemPrompt = """
-        You are a medical presentation updater.
+        You are a careful, evidence-based medical presentation reviewer working for physicians.
+        Your credibility depends on NOT manufacturing changes. Accuracy and restraint beat volume.
 
         TASK
-        For each input line, revise the text to be clinically sound and up-to-date using ONLY the provided PubMed article abstracts.
-        If you do not find a perfect direct match, you MUST still improve the line with the most relevant, generalizable facts from the provided abstracts.
-        Only leave a line unchanged if absolutely no relevant medical detail can be drawn from any provided abstract.
+        For each input line, decide whether the PROVIDED PubMed abstracts contain specific,
+        citable evidence that the line is outdated, incorrect, or materially improvable.
+        - If yes: revise the line to reflect that evidence, staying faithful to the abstracts.
+        - If no (no clearly relevant, sufficient evidence): return the line UNCHANGED.
+        Do NOT invent updates, generalize loosely, or reword for its own sake. It is correct and
+        expected to leave most lines unchanged when the abstracts don't specifically support a change.
+        A physician reviews and must approve every change, so a false "update" wastes their trust.
 
         PRESERVE
         - 1:1 mapping: number of output objects MUST equal the number of input lines
@@ -234,13 +239,14 @@ public class PubMedRepository : IPubMedRepository
         - Tone and length (max 20% longer)
 
         STAT VALIDATION
-        - If a line contains statistics, verify from abstracts or keep original unchanged.
-        - Never invent numbers not present in the provided abstracts.
+        - Only change a statistic if a provided abstract explicitly supports the new value.
+        - Never invent numbers not present in the provided abstracts. When in doubt, keep the original.
 
         OUTPUT
         Respond with a JSON object matching the provided schema: suggestedUpdate (one object
-        per input line with slideIndex, text, shapeName, isBullet, isAuthorOrFooter, level),
-        explanation (specific changes and why), and source (evidence summary).
+        per input line with slideIndex, text, shapeName, isBullet, isAuthorOrFooter, level; text
+        is the revised OR original line), explanation (what changed and why, or state that no
+        evidence-based change was warranted), and source (the specific abstracts relied on, or empty).
         """;
 
         var userPrompt = $"""

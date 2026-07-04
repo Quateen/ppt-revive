@@ -289,6 +289,7 @@ const Index = () => {
                 <li>🔬 <strong>Free tier:</strong> up to {freeSlides} slides revived per deck</li>
                 <li>📂 <strong>Max file size:</strong> {AppConfig.MAX_PPT_FILE_SIZE_MB} MB · <strong>Format:</strong> .pptx only</li>
                 <li>📝 <strong>Text-focused:</strong> slide text is updated; images, charts and tables are preserved as-is.</li>
+                <li>🔒 <strong>No patient data, please:</strong> don't upload slides with patient-identifiable information (PHI). Slide text is sent to AI and PubMed services for analysis, processed transiently, and not shared.</li>
                 <li>✅ <strong>You stay in control:</strong> every change is evidence-linked and needs your approval.</li>
               </ul>
             </div>
@@ -306,8 +307,8 @@ const Index = () => {
             {uploadedFile && (
               <>
                 {(uploading || analyzing) && (
-                  <div className="mt-6 text-center flex flex-col items-center justify-center">
-                    <svg className="animate-spin h-6 w-6 text-primary mb-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <div className="mt-6 text-center flex flex-col items-center justify-center" role="status" aria-live="polite">
+                    <svg className="animate-spin h-6 w-6 text-primary mb-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" aria-hidden="true">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
                     </svg>

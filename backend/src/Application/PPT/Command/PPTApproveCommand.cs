@@ -143,6 +143,12 @@ titleText: slideData.TitleText ?? slideData.OriginalSlideContent.Split('\n').Fir
             AddBrandFooterToAllSlides(presentationPart);
             AddAttributionSlide(presentationPart);
 
+            // Stamp document metadata so the deck is attributable in file properties.
+            presentation.PackageProperties.Creator = "PPT-Revive by Nucleus Digitalis";
+            presentation.PackageProperties.LastModifiedBy = "PPT-Revive (NucleusDigitalis.com)";
+            presentation.PackageProperties.Subject = "Updated with current evidence via PPT-Revive";
+            presentation.PackageProperties.Modified = DateTime.UtcNow;
+
             // ✅ Save presentation and reset stream before writing to disk
             presentation.PresentationPart?.Presentation?.Save();
         }
@@ -338,7 +344,7 @@ titleText: slideData.TitleText ?? slideData.OriginalSlideContent.Split('\n').Fir
 
             {
                 var titleShape = CreateTextShape(
-                    "References",
+                    $"References — evidence current as of {DateTime.UtcNow:MMMM yyyy}",
                     0, 0,
                     914400 * 10,
                     914400 * 1,

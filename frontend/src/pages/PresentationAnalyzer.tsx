@@ -6,6 +6,7 @@ import PresentationHeader from '@/components/PresentationHeader';
 import ProgressDisplay from '@/components/ProgressDisplay';
 import SlideNavigation from '@/components/SlideNavigation';
 import GeneratePresentationButton from '@/components/GeneratePresentationButton';
+import MedicalDisclaimer from '@/components/MedicalDisclaimer';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/components/ui/use-toast';
 import { Presentation, Slide, Reference } from '@/types/presentation';
@@ -290,7 +291,18 @@ const PresentationAnalyzer = () => {
       try {
         setGenerating(true);
         const filePath = finalizedSlides.newFilePath;
-        const fileName = 'UpdatedPresentation.pptx';
+
+        // Derive a branded, recognisable download name from the original deck,
+        // instead of the generic "UpdatedPresentation.pptx".
+        const rawName =
+          originalFileNameFromUpload || presentation?.originalFileName || '';
+        const baseName = rawName
+          .replace(/^.*[\\/]/, '')      // strip any path
+          .replace(/\.pptx$/i, '')       // strip existing .pptx extension
+          .trim();
+        const fileName = baseName
+          ? `${baseName}-revived.pptx`
+          : 'PPT-Revive-updated.pptx';
 
         // The download endpoint is authenticated; send the bearer token.
         const user = getCurrentUser<{ accessToken?: string }>(AppConfig.STORAGE_KEY);
@@ -329,7 +341,7 @@ const PresentationAnalyzer = () => {
     return (
 
       <main className="container mx-auto px-4 py-8 flex-1 flex items-center justify-center">
-        <div className="text-center">
+        <div className="text-center" role="status" aria-live="polite">
           <h2 className="text-xl font-medium mb-2">Loading presentation...</h2>
           <Progress value={50} className="w-64 h-2" />
         </div>
@@ -344,6 +356,7 @@ const PresentationAnalyzer = () => {
   return (
 
     <main className="container mx-auto px-4 py-8 flex-1">
+      <MedicalDisclaimer variant="banner" className="mb-6" />
       <div className="flex flex-col lg:flex-row gap-8">
         <div className="lg:w-3/4">
           <PresentationHeader title={presentation.title} author="" originalFileName={originalFileNameFromUpload || presentation.originalFileName} />

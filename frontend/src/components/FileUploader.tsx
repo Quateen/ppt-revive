@@ -18,6 +18,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({ onFileSelected, selectedFil
 
   const MAX_FILE_SIZE_MB = AppConfig.MAX_PPT_FILE_SIZE_MB;
   const MAX_SLIDES = AppConfig.MAX_PPT_SLIDES;
+  const FREE_SLIDES = AppConfig.FREE_TIER_SLIDES;
 
   const checkSlideCount = async (file: File): Promise<number> => {
     try {
@@ -108,8 +109,11 @@ const FileUploader: React.FC<FileUploaderProps> = ({ onFileSelected, selectedFil
           </div>
           <p className="mt-4 text-lg font-medium text-gray-700">Drag and drop your .pptx file</p>
           <p className="text-sm text-gray-500 mt-1">or click to browse files</p>
-          <p className="text-xs text-gray-400 mt-3">
-            Accepted: .pptx only · Max {MAX_FILE_SIZE_MB} MB · Max {MAX_SLIDES} slides
+          <p className="text-xs text-gray-500 mt-3">
+            Upload your full deck — we'll revive the first {FREE_SLIDES} slides free.
+          </p>
+          <p className="text-xs text-gray-400 mt-1">
+            Accepted: .pptx only · Max {MAX_FILE_SIZE_MB} MB · Up to {MAX_SLIDES} slides
           </p>
         </div>
       ) : (
