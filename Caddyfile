@@ -1,10 +1,27 @@
 # Caddy obtains and renews Let's Encrypt certificates automatically,
 # as long as both domains' DNS A records point at this server.
 
+(security_headers) {
+    header {
+        # HSTS (Caddy already serves HTTPS)
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        Permissions-Policy "geolocation=(), microphone=(), camera=()"
+        -Server
+    }
+}
+
 {$APP_DOMAIN} {
+    import security_headers
+    # CSP: allow self, the Fontshare font CDN, and (optionally) Plausible analytics.
+    # connect-src includes the API domain so the SPA can call the backend.
+    header Content-Security-Policy "default-src 'self'; script-src 'self' https://plausible.io; style-src 'self' 'unsafe-inline' https://api.fontshare.com; font-src 'self' https://cdn.fontshare.com; img-src 'self' data:; connect-src 'self' https://{$API_DOMAIN} https://plausible.io; frame-ancestors 'none'; base-uri 'self'"
     reverse_proxy frontend:80
 }
 
 {$API_DOMAIN} {
+    import security_headers
     reverse_proxy backend:80
 }

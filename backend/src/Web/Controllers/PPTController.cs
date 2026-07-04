@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using PPTRevive.Application.PPT.Command;
 using PPTRevive.Application.PPT.Query;
 
@@ -7,8 +8,11 @@ namespace PPTRevive.Web.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
-[Authorize]
-
+// Free lead-magnet tier: the whole revive flow is usable with no account.
+// Jobs are protected by their unguessable jobId (GUID); if a user IS signed in,
+// per-user ownership is additionally enforced in the handlers.
+[AllowAnonymous]
+[EnableRateLimiting("ppt-anon")]
 public class PPTController : ControllerBase
 {
     private readonly ISender _sender;

@@ -107,7 +107,12 @@ public class ProcessPptJobService : IProcessPptJobService
             var slideIdList = presentationPart.Presentation.SlideIdList!;
             var slideIds = slideIdList.Elements<P.SlideId>().ToList();
 
-            for (int slideIndex = 0; slideIndex < slideIds.Count; slideIndex++)
+            // Free lead-magnet tier: only the first N slides are revived; the rest of the
+            // deck is left untouched. This is the "revive up to N slides free" wedge.
+            var freeTierSlides = _configuration.GetValue<int?>("Processing:FreeTierSlides") ?? 5;
+            var slidesToProcess = Math.Min(slideIds.Count, freeTierSlides);
+
+            for (int slideIndex = 0; slideIndex < slidesToProcess; slideIndex++)
             {
                 var slideNo = slideIndex + 1;
                 var relId = slideIds[slideIndex].RelationshipId;

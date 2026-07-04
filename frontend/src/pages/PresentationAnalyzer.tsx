@@ -13,6 +13,7 @@ import { useAppDispatch, useAppSelector } from '@/hooks/reduxHooks';
 import { selectFinalizedSlidesStatus, selectPresentatiionDetialsStatus, selectUploadPresentationStatus } from '@/app-redux/presentation/presentationSlice';
 import { finalizeSlidesAction } from '@/app-redux/presentation/presentationAction';
 import { getCurrentUser } from '@/common/utils/userAttribs4mLocalStorage';
+import JoinFoundingMembers from '@/components/JoinFoundingMembers';
 import { useLocation } from 'react-router-dom';
 
 
@@ -369,6 +370,16 @@ const PresentationAnalyzer = () => {
           <ReferencesList references={references} />
         </div>
       </div>
+
+      {finalizedSlides?.newFilePath && (
+        <div className="mt-12 max-w-3xl mx-auto">
+          <JoinFoundingMembers
+            source="post-download"
+            heading="That's your evidence-current deck. Want this across your whole practice?"
+            subheading="You just saw what one Nucleus Digitalis tool does in 60 seconds. The AI-Enhanced Physician program installs a whole stack like this into your daily work — physician-led, human-reviewed. Join the founding wave."
+          />
+        </div>
+      )}
     </main>
 
   );

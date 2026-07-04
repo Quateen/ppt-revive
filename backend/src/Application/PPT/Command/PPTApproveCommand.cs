@@ -137,6 +137,12 @@ titleText: slideData.TitleText ?? slideData.OriginalSlideContent.Split('\n').Fir
                 AddReferenceSlides(presentationPart, allReferences, referenceSlideTemplate, 12);
             }
 
+            // Brand the deliverable: NucleusDigitalis.com footer on every slide (the ND
+            // slide standard) + a closing attribution/CTA slide. The downloaded deck is a
+            // re-share surface, so this is the wedge's most viral marketing touchpoint.
+            AddBrandFooterToAllSlides(presentationPart);
+            AddAttributionSlide(presentationPart);
+
             // ✅ Save presentation and reset stream before writing to disk
             presentation.PresentationPart?.Presentation?.Save();
         }
@@ -337,7 +343,8 @@ titleText: slideData.TitleText ?? slideData.OriginalSlideContent.Split('\n').Fir
                     914400 * 10,
                     914400 * 1,
                     fontSize: 2400,
-                    isTitle: true
+                    isTitle: true,
+                    id: 2U
                 );
                 shapeTree.Append(titleShape);
 
@@ -346,7 +353,8 @@ titleText: slideData.TitleText ?? slideData.OriginalSlideContent.Split('\n').Fir
                     914400 * 1, 0,
                     914400 * 10,
                     914400 * 5,
-                    fontSize: 1600
+                    fontSize: 1600,
+                    id: 3U
                 );
                 shapeTree.Append(bodyShape);
 
@@ -423,16 +431,18 @@ titleText: slideData.TitleText ?? slideData.OriginalSlideContent.Split('\n').Fir
 
     }
 
-    // ✅ Helper method to create title or content shapes
+    // ✅ Helper method to create title or content shapes.
+    // id must be unique within a slide's shape tree (duplicate ids corrupt the deck).
     private static P.Shape CreateTextShape(
         string text,
         long y, long x,
         long cx, long cy,
         int fontSize,
-        bool isTitle = false)
+        bool isTitle = false,
+        uint id = 2U)
     {
         var nvProps = new P.NonVisualShapeProperties(
-            new P.NonVisualDrawingProperties { Id = 1U, Name = "TextBox" },
+            new P.NonVisualDrawingProperties { Id = id, Name = "TextBox" },
             new P.NonVisualShapeDrawingProperties(),
             isTitle
                 ? new P.ApplicationNonVisualDrawingProperties(
@@ -464,6 +474,96 @@ titleText: slideData.TitleText ?? slideData.OriginalSlideContent.Split('\n').Fir
 
 
         return new P.Shape(nvProps, spPr, textBody);
+    }
+
+    // Stamps "NucleusDigitalis.com" as a small, muted, right-aligned footer on every
+    // slide — the ND slide-footer standard, and free attribution on a re-shared deck.
+    private void AddBrandFooterToAllSlides(PresentationPart presentationPart)
+    {
+        var slideSize = presentationPart.Presentation.SlideSize;
+        long width = slideSize?.Cx?.Value ?? 9144000L;
+        long height = slideSize?.Cy?.Value ?? 6858000L;
+        long footerCx = 2743200L;      // 3 in
+        long footerCy = 274320L;       // 0.3 in
+        long footerX = width - footerCx - 137160L;
+        long footerY = height - footerCy - 45720L;
+
+        foreach (var slidePart in presentationPart.SlideParts)
+        {
+            var shapeTree = slidePart.Slide?.CommonSlideData?.ShapeTree;
+            if (shapeTree == null) continue;
+
+            // Unique shape id within this slide (duplicate ids corrupt the deck).
+            uint maxId = shapeTree.Descendants<P.NonVisualDrawingProperties>()
+                .Select(p => p.Id?.Value ?? 0U)
+                .DefaultIfEmpty(1U)
+                .Max();
+            uint footerId = maxId + 1;
+
+            var nvProps = new P.NonVisualShapeProperties(
+                new P.NonVisualDrawingProperties { Id = footerId, Name = "NucleusFooter" },
+                new P.NonVisualShapeDrawingProperties(),
+                new P.ApplicationNonVisualDrawingProperties());
+
+            var spPr = new P.ShapeProperties(
+                new A.Transform2D(
+                    new A.Offset { X = footerX, Y = footerY },
+                    new A.Extents { Cx = footerCx, Cy = footerCy }));
+
+            var runProps = new A.RunProperties { FontSize = 800 };
+            runProps.Append(new A.SolidFill(new A.RgbColorModelHex { Val = "696761" }));
+            var run = new A.Run(runProps, new A.Text("NucleusDigitalis.com"));
+
+            var para = new A.Paragraph(
+                new A.ParagraphProperties { Alignment = A.TextAlignmentTypeValues.Right },
+                run);
+
+            var textBody = new P.TextBody(new A.BodyProperties(), new A.ListStyle(), para);
+            shapeTree.Append(new P.Shape(nvProps, spPr, textBody));
+        }
+    }
+
+    // Appends a closing attribution/CTA slide: proof + a route back into the funnel.
+    private void AddAttributionSlide(PresentationPart presentationPart)
+    {
+        var slideIdList = presentationPart.Presentation.SlideIdList!;
+        var existingSlideIds = slideIdList.Elements<P.SlideId>().Select(x => x.Id!.Value).ToList();
+        var slideSize = presentationPart.Presentation.SlideSize;
+        long width = slideSize?.Cx?.Value ?? 9144000L;
+        long height = slideSize?.Cy?.Value ?? 6858000L;
+
+        var newSlidePart = presentationPart.AddNewPart<SlidePart>();
+
+        var shapeTree = new P.ShapeTree(
+            new P.NonVisualGroupShapeProperties(
+                new P.NonVisualDrawingProperties { Id = 1U, Name = string.Empty },
+                new P.NonVisualGroupShapeDrawingProperties(),
+                new P.ApplicationNonVisualDrawingProperties()),
+            new P.GroupShapeProperties(new A.TransformGroup()));
+
+        shapeTree.Append(CreateTextShape(
+            "Updated with current evidence",
+            y: height / 3, x: 914400L, cx: width - 1828800L, cy: 1000000L,
+            fontSize: 2800, isTitle: true, id: 2U));
+
+        shapeTree.Append(CreateTextShape(
+            "Revived with PPT-Revive — a free tool from Nucleus Digitalis. Bring your own slides up to date at revive.nucleusdigitalis.com",
+            y: height / 3 + 1100000L, x: 914400L, cx: width - 1828800L, cy: 1400000L,
+            fontSize: 1600, id: 3U));
+
+        newSlidePart.Slide = new P.Slide(new P.CommonSlideData(shapeTree));
+
+        var lastSlideId = slideIdList.Elements<P.SlideId>().LastOrDefault();
+        if (lastSlideId?.RelationshipId != null)
+        {
+            var templatePart = (SlidePart)presentationPart.GetPartById(lastSlideId.RelationshipId!);
+            if (templatePart.SlideLayoutPart != null)
+                newSlidePart.AddPart(templatePart.SlideLayoutPart);
+        }
+
+        uint newSlideId = (existingSlideIds.Any() ? existingSlideIds.Max() : 255U) + 1;
+        string relId = presentationPart.GetIdOfPart(newSlidePart);
+        slideIdList.Append(new P.SlideId { Id = newSlideId, RelationshipId = relId });
     }
 
     private List<string> SmartWrap(string input, int maxLength = 100)

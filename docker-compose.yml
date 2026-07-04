@@ -27,6 +27,7 @@ services:
       Claude__ApiKey: ${CLAUDE_API_KEY}
       Claude__Model: ${CLAUDE_MODEL:-claude-opus-4-8}
       PubMed__ApiKey: ${PUBMED_API_KEY}
+      Processing__FreeTierSlides: ${FREE_TIER_SLIDES:-5}
       Smtp__Host: ${SMTP_HOST:-}
       Smtp__Port: ${SMTP_PORT:-587}
       Smtp__Username: ${SMTP_USERNAME:-}
@@ -46,6 +47,9 @@ services:
       args:
         VITE_API_BASE_URL: https://${API_DOMAIN}
         VITE_GOOGLE_OAUTH_CLIENT_ID: ${GOOGLE_OAUTH_CLIENT_ID:-}
+        VITE_FREE_TIER_SLIDES: ${FREE_TIER_SLIDES:-5}
+        VITE_FOUNDING_URL: ${FOUNDING_URL:-https://nucleusdigitalis.com}
+        VITE_PLAUSIBLE_DOMAIN: ${PLAUSIBLE_DOMAIN:-}
     restart: unless-stopped
 
   caddy:

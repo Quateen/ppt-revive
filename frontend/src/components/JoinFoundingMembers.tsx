@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { ArrowRight, Check } from 'lucide-react';
 import { AppConfig } from '@/config';
 import apiClient from '@/api/apiClient';
+import { trackEvent } from '@/lib/analytics';
 
 interface JoinFoundingMembersProps {
   /** Where this CTA appears, so we can attribute the lead source. */
@@ -33,6 +34,7 @@ const JoinFoundingMembers: React.FC<JoinFoundingMembersProps> = ({
     e.preventDefault();
     if (!email || submitting) return;
     setSubmitting(true);
+    trackEvent('Join Founding Members', { source });
     try {
       await apiClient.post('/api/lead', { email, source });
     } catch {

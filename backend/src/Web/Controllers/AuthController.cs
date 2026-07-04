@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using PPTRevive.Application.Auth.Command.ChangeEmail;
 using PPTRevive.Application.Auth.Command.ChangePassword;
 using PPTRevive.Application.Auth.Command.CompleteForgetPassword;
@@ -16,6 +17,7 @@ namespace PPTRevive.Web.Controllers;
 [Route("api/[controller]")]
 [ApiController]
 [Authorize]
+[EnableRateLimiting("auth")]
 public class AuthController(ISender sender) : ControllerBase
 {
     [AllowAnonymous]
