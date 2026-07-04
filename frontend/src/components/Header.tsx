@@ -1,6 +1,7 @@
 import React from 'react';
-import { Book, FileText, Home, LogIn, LogOut } from 'lucide-react';
+import { Book, Home, LogIn, LogOut } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import BrandLogo from '@/components/BrandLogo';
 import { Button } from '@/components/ui/button';
 import { useAppSelector, useAppDispatch } from '@/hooks/reduxHooks';
 import { selectUser } from '@/app-redux/auth/authSlice';
@@ -29,14 +30,10 @@ const Header: React.FC = () => {
 
   return (
     <>
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
+      <header className="bg-card/80 backdrop-blur border-b border-border sticky top-0 z-10">
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2">
-            <div className="bg-medical-600 p-1.5 rounded-md">
-              <FileText className="w-5 h-5 text-white" />
-            </div>
-            <span className="font-semibold text-lg text-gray-800">MediPresent</span>
-            <span className="text-medical-600 font-medium">Revive</span>
+          <Link to="/" aria-label="PPT-Revive by Nucleus Digitalis — home">
+            <BrandLogo />
           </Link>
 
           <nav className="flex gap-4 items-center">
@@ -60,7 +57,7 @@ const Header: React.FC = () => {
                   variant="ghost"
                   size="sm"
                   asChild
-                  className="relative flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-700 hover:bg-blue-200 font-semibold"
+                  className="relative flex items-center justify-center w-8 h-8 rounded-full bg-secondary text-secondary-foreground hover:bg-secondary/80 font-semibold"
                 >
                   <Link to="/profile" title="Profile">
                     {getUserInitials(user?.name || user?.email || '')}
@@ -82,7 +79,7 @@ const Header: React.FC = () => {
                 variant="ghost"
                 size="sm"
                 onClick={() => dispatch(showAuthModal())}
-                className="text-blue-600 hover:text-blue-800 flex items-center gap-1.5"
+                className="text-primary hover:text-primary/80 flex items-center gap-1.5"
               >
                 <LogIn className="w-4 h-4" />
                 <span>Login</span>

@@ -1,37 +1,52 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { useAppSelector } from '@/hooks/reduxHooks';
-import { selectUser } from '@/app-redux/auth/authSlice';
+import BrandLogo from '@/components/BrandLogo';
 
 const Footer: React.FC = () => {
-  const user = useAppSelector(selectUser);
-
   return (
-    <footer className="bg-white border-t border-gray-200 mt-auto">
-      <div className="container mx-auto px-4 py-6">
-        <div className="flex flex-col md:flex-row justify-between items-center">
-          <div className="mb-4 md:mb-0">
-            <div className="flex items-center gap-2">
-              <span className="font-semibold text-gray-800">MediPresent</span>
-              <span className="text-medical-600">Revive</span>
-            </div>
-            <p className="text-sm text-gray-600 mt-1">
-              Updating medical presentations with the latest research
+    <footer className="bg-card border-t border-border mt-auto">
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex flex-col md:flex-row justify-between items-start gap-6">
+          <div className="max-w-sm">
+            <BrandLogo />
+            <p className="text-sm text-muted-foreground mt-3">
+              Bring your medical slides up to current, cited evidence — physician-led,
+              AI-enabled, human-reviewed.
             </p>
           </div>
 
-          <div className="flex gap-6">
-            <Link to="/" className="text-sm text-gray-600 hover:text-medical-600">
+          <div className="flex gap-8">
+            <Link to="/" className="text-sm text-muted-foreground hover:text-primary">
               Home
             </Link>
-            <Link to="/about" className="text-sm text-gray-600 hover:text-medical-600">
+            <Link to="/about" className="text-sm text-muted-foreground hover:text-primary">
               About
             </Link>
+            <a
+              href="https://nucleusdigitalis.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm text-muted-foreground hover:text-primary"
+            >
+              NucleusDigitalis.com
+            </a>
           </div>
         </div>
 
-        <div className="mt-6 border-t border-gray-100 pt-4 text-center text-sm text-gray-500">
-          © {new Date().getFullYear()} MediPresent Revive. All rights reserved.
+        <div className="mt-8 border-t border-border pt-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-sm text-muted-foreground">
+          <span>© {new Date().getFullYear()} Nucleus Digitalis. All rights reserved.</span>
+          <span>
+            A free tool from the{' '}
+            <a
+              href="https://nucleusdigitalis.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline"
+            >
+              AI-Enhanced Physician
+            </a>{' '}
+            program.
+          </span>
         </div>
       </div>
     </footer>

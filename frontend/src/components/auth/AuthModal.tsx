@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { Mail, Lock, ArrowRight, X, FileText, Eye, EyeOff } from 'lucide-react';
+import { Mail, Lock, ArrowRight, X, Eye, EyeOff } from 'lucide-react';
 import { GoogleLogin, CredentialResponse } from '@react-oauth/google';
+import BrandLogo from '@/components/BrandLogo';
 
 import {
   loginAction,
@@ -222,12 +223,8 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
           <X className="h-6 w-6" />
         </button>
 
-        <div className="flex items-center justify-center gap-2 mb-2">
-          <div className="bg-medical-600 p-1.5 rounded-md">
-            <FileText className="w-5 h-5 text-white" />
-          </div>
-          <span className="font-semibold text-lg text-gray-800">MediPresent</span>
-          <span className="text-medical-600 font-medium">Revive</span>
+        <div className="flex items-center justify-center mb-2">
+          <BrandLogo />
         </div>
 
         <p className="text-center text-gray-600 mb-2">

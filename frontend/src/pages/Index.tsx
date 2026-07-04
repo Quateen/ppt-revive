@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import FileUploader from '@/components/FileUploader';
 import { Button } from '@/components/ui/button';
-import { CircleHelp, FileText, Search, RotateCcw, FileCheck } from 'lucide-react';
+import JoinFoundingMembers from '@/components/JoinFoundingMembers';
+import { NucleusMark } from '@/components/BrandLogo';
+import { CircleHelp, FileText, Search, RotateCcw, FileCheck, ShieldCheck, Stethoscope, ArrowRight } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { getPresentationStatusAction, startPresentationAnalyzeAction, uploadPresentationAction } from '@/app-redux/presentation/presentationAction';
 import { useAppDispatch, useAppSelector } from '@/hooks/reduxHooks';
@@ -45,7 +47,6 @@ const Index = () => {
   }, [uploading, uploadError]);
 
 
-  // const slideInfo = details?.result?.slidePages;
   const jobId = uploadResponse?.jobId;
 
   const handleAnalyze = async () => {
@@ -56,7 +57,7 @@ const Index = () => {
     dispatch(startPresentationAnalyzeAction({ jobId }));
     toast({
       title: "Analysis in progress",
-      description: "We're analyzing your presentation content. This may take a moment..."
+      description: "We're checking each slide against current evidence. This takes a moment..."
     });
   };
 
@@ -106,18 +107,6 @@ const Index = () => {
     }
   }, [jobId]);
 
-  //   useEffect(() => {
-  //   if (!uploading && uploadResponse === undefined && startStatus?.status === "failed") {
-  //     // You can trigger modal opening here too if not done by interceptor
-  //     // dispatch(showAuthModal());
-  //     toast({
-  //       variant: "destructive",
-  //       title: "Upload failed",
-  //       description: "You may need to login first to upload.",
-  //     });
-  //   }
-  // }, [uploadResponse, startStatus?.status, uploading]);
-
 
   // auto stop analyzing when status is Completed or Failed
   useEffect(() => {
@@ -142,7 +131,7 @@ const Index = () => {
           navigate("/analyzer", {
             state: {
               jobId,
-              originalFileName: uploadedFile?.name, // 👈 send file name
+              originalFileName: uploadedFile?.name,
             },
           });
         }
@@ -184,86 +173,123 @@ const Index = () => {
     return () => window.removeEventListener('beforeunload', beforeUnloadHandler);
   }, [analyzing]);
 
+  const freeSlides = AppConfig.FREE_TIER_SLIDES;
+
+  const steps = [
+    { icon: FileText, title: 'Upload your deck', body: `Drop in a .pptx lecture. The free tier revives up to ${freeSlides} slides — no account needed.` },
+    { icon: Search, title: 'Checked against the literature', body: 'Each slide is matched to current papers retrieved from PubMed — real citations, not invented ones.' },
+    { icon: RotateCcw, title: 'You approve every change', body: 'Old vs. proposed, side by side. Approve, edit, or reject each slide. Nothing ships without your sign-off.' },
+    { icon: FileCheck, title: 'Download, fully cited', body: 'Export the revived deck with a references slide — every update traceable to its source.' },
+  ];
 
   return (
 
     <main className="flex-1">
-      {/* Hero section */}
-      <section className="bg-gradient-to-r from-medical-800 to-medical-600 text-white py-16">
-        <div className="container mx-auto px-4">
+      {/* Hero */}
+      <section className="relative overflow-hidden">
+        <div className="absolute inset-0 -z-10 bg-gradient-to-b from-secondary/50 to-background" />
+        <div className="container mx-auto px-4 py-20 md:py-24">
           <div className="max-w-3xl mx-auto text-center">
-            <h1 className="text-4xl font-bold mb-6">
-              Keep Medical Presentations Up-to-Date with the Latest Research
+            <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-1.5 text-sm text-muted-foreground mb-6">
+              <Stethoscope className="h-4 w-4 text-primary" />
+              Physician-led · AI-enabled · Human-reviewed
+            </span>
+            <h1 className="font-display text-4xl md:text-6xl font-semibold text-foreground leading-tight mb-6">
+              Your 2019 slides are<br className="hidden sm:block" />{' '}
+              <span className="nucleus-gradient-text">quietly costing you credibility.</span>
             </h1>
-            <p className="text-xl mb-8 text-medical-50">
-              MediPresent Revive automatically analyzes your existing slides and suggests updates based on recent medical literature.
+            <p className="text-lg md:text-xl text-foreground/75 mb-8 max-w-2xl mx-auto">
+              PPT-Revive rewrites your medical lecture against current, cited evidence — one slide at a
+              time, with you approving every change. No AI hype. Just a clear path back to current.
             </p>
-            <Button size="lg" variant="secondary" asChild className="text-medical-800 font-medium">
-              <a href="#upload" className="px-8">Get Started</a>
-            </Button>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
+              <Button size="lg" asChild className="font-medium px-8">
+                <a href="#upload">Revive {freeSlides} slides free <ArrowRight className="h-4 w-4" /></a>
+              </Button>
+              <Button size="lg" variant="outline" asChild className="font-medium">
+                <a href="#how">See how it works</a>
+              </Button>
+            </div>
+            <p className="text-sm text-muted-foreground mt-4">Free to try · No account needed · Your file is never shared</p>
           </div>
         </div>
       </section>
 
-      {/* How it works section */}
-      <section className="py-16 bg-gray-50">
+      {/* Trust bar */}
+      <section className="border-y border-border bg-card">
+        <div className="container mx-auto px-4 py-5">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center text-sm">
+            {['Evidence from PubMed', 'You approve every change', 'Real citations — no hallucinations', 'Free, no account'].map((t) => (
+              <div key={t} className="flex items-center justify-center gap-2 text-muted-foreground">
+                <ShieldCheck className="h-4 w-4 text-primary shrink-0" />
+                <span>{t}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* How it works */}
+      <section id="how" className="py-20">
         <div className="container mx-auto px-4">
-          <h2 className="text-3xl font-bold text-center mb-12">How It Works</h2>
+          <div className="text-center max-w-2xl mx-auto mb-14">
+            <h2 className="font-display text-3xl md:text-4xl font-semibold mb-3">From dated to defensible in four steps</h2>
+            <p className="text-muted-foreground">Most clinicians don’t need more AI hype. They need a clear path — this is one concrete step on it.</p>
+          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            <div className="text-center">
-              <div className="bg-white p-4 rounded-full w-16 h-16 mx-auto mb-4 shadow-sm flex items-center justify-center">
-                <FileText className="h-8 w-8 text-medical-600" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {steps.map(({ icon: Icon, title, body }, i) => (
+              <div key={title} className="rounded-2xl border border-border bg-card p-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="nucleus-gradient text-white w-10 h-10 rounded-xl flex items-center justify-center font-display font-semibold">
+                    {i + 1}
+                  </div>
+                  <Icon className="h-5 w-5 text-primary" />
+                </div>
+                <h3 className="text-lg font-semibold mb-2">{title}</h3>
+                <p className="text-muted-foreground text-sm">{body}</p>
               </div>
-              <h3 className="text-xl font-semibold mb-2">Upload Presentation</h3>
-              <p className="text-gray-600">Upload your PowerPoint presentation for analysis</p>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Founder credibility */}
+      <section className="py-4">
+        <div className="container mx-auto px-4">
+          <div className="max-w-3xl mx-auto rounded-3xl border border-border bg-secondary/40 p-8 flex flex-col sm:flex-row items-center gap-6 text-center sm:text-left">
+            <div className="nucleus-gradient rounded-2xl p-4 shrink-0">
+              <NucleusMark className="h-10 w-10" />
             </div>
-
-            <div className="text-center">
-              <div className="bg-white p-4 rounded-full w-16 h-16 mx-auto mb-4 shadow-sm flex items-center justify-center">
-                <Search className="h-8 w-8 text-medical-600" />
-              </div>
-              <h3 className="text-xl font-semibold mb-2">AI Analysis</h3>
-              <p className="text-gray-600">Our AI searches for recent relevant research</p>
-            </div>
-
-            <div className="text-center">
-              <div className="bg-white p-4 rounded-full w-16 h-16 mx-auto mb-4 shadow-sm flex items-center justify-center">
-                <RotateCcw className="h-8 w-8 text-medical-600" />
-              </div>
-              <h3 className="text-xl font-semibold mb-2">Review Updates</h3>
-              <p className="text-gray-600">Approve or reject suggested changes</p>
-            </div>
-
-            <div className="text-center">
-              <div className="bg-white p-4 rounded-full w-16 h-16 mx-auto mb-4 shadow-sm flex items-center justify-center">
-                <FileCheck className="h-8 w-8 text-medical-600" />
-              </div>
-              <h3 className="text-xl font-semibold mb-2">Download Updated Slides</h3>
-              <p className="text-gray-600">Get your presentation with all the latest research</p>
+            <div>
+              <p className="text-foreground/90 text-lg font-display mb-2">
+                “Keeping your teaching current shouldn’t cost a weekend — and the fastest way to trust a
+                tool is to see it show its evidence.”
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Built by <span className="font-medium text-foreground">Ahmed Quateen, MD</span> — neurosurgeon &amp; spine surgeon,
+                adjunct professor, UAE University. Founder, Nucleus Digitalis.
+              </p>
             </div>
           </div>
         </div>
       </section>
 
-
-
-
-      {/* Upload section */}
-      <section id="upload" className="py-16 bg-white">
+      {/* Upload */}
+      <section id="upload" className="py-20">
         <div className="container mx-auto px-4">
           <div className="max-w-2xl mx-auto">
-            <h2 className="text-3xl font-bold text-center mb-2">Update Your Presentation</h2>
-            <p className="text-center text-gray-600 mb-8">
-              Upload your medical presentation to get started
-            </p>
-            <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 p-4 rounded-md mb-6 text-sm">
-              <ul className="list-disc pl-5 space-y-1">
-                <li>📂 <strong>Max file size:</strong> {AppConfig.MAX_PPT_FILE_SIZE_MB} MB</li>
-                <li>🖼️ <strong>Max slides:</strong> {AppConfig.MAX_PPT_SLIDES} slides per upload</li>
-                <li>📝 <strong>Text-only updates:</strong> Only the text in slides is analyzed and updated.</li>
-                <li>🚫 <strong>Images, charts, and tables</strong> will be ignored during the update process.</li>
-                <li>📄 <strong>Accepted format:</strong> .pptx files only</li>
+            <div className="text-center mb-8">
+              <h2 className="font-display text-3xl md:text-4xl font-semibold mb-2">Revive your first {freeSlides} slides — free</h2>
+              <p className="text-muted-foreground">Upload a .pptx and see the quality for yourself. No account required.</p>
+            </div>
+
+            <div className="rounded-xl border border-border bg-secondary/40 text-foreground/80 p-4 mb-6 text-sm">
+              <ul className="space-y-1.5">
+                <li>🔬 <strong>Free tier:</strong> up to {freeSlides} slides revived per deck</li>
+                <li>📂 <strong>Max file size:</strong> {AppConfig.MAX_PPT_FILE_SIZE_MB} MB · <strong>Format:</strong> .pptx only</li>
+                <li>📝 <strong>Text-focused:</strong> slide text is updated; images, charts and tables are preserved as-is.</li>
+                <li>✅ <strong>You stay in control:</strong> every change is evidence-linked and needs your approval.</li>
               </ul>
             </div>
 
@@ -279,25 +305,23 @@ const Index = () => {
 
             {uploadedFile && (
               <>
-                {/* Loader between file and button */}
                 {(uploading || analyzing) && (
                   <div className="mt-6 text-center flex flex-col items-center justify-center">
-                    <svg className="animate-spin h-6 w-6 text-medical-600 mb-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <svg className="animate-spin h-6 w-6 text-primary mb-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
                     </svg>
-                    <p className="text-sm text-gray-500">
-                      {uploading ? "Uploading presentation. Please wait..." : "Analyzing presentation. Please wait..."}
+                    <p className="text-sm text-muted-foreground">
+                      {uploading ? "Uploading your deck. Please wait..." : "Checking each slide against current evidence..."}
                     </p>
                   </div>
                 )}
 
-                {/* Show Upload button if jobId does not exist */}
                 {!jobId && !uploading && (
                   <div className="mt-6 text-center">
                     <Button
                       size="lg"
-                      className="w-full max-w-xs mx-auto"
+                      className="w-full max-w-xs mx-auto font-medium"
                       onClick={() => {
                         setUploading(true);
                         const formData = new FormData();
@@ -310,26 +334,34 @@ const Index = () => {
                   </div>
                 )}
 
-                {/* Show Analyze button only if jobId exists */}
                 {jobId && !uploading && (
                   <div className="mt-8 text-center">
                     <Button
                       size="lg"
-                      className="w-full max-w-xs mx-auto"
+                      className="w-full max-w-xs mx-auto font-medium"
                       onClick={handleAnalyze}
                       disabled={analyzing}
                     >
-                      Analyze Presentation
+                      Revive my slides
                     </Button>
 
-                    <div className="mt-4 flex items-center justify-center text-sm text-gray-500">
+                    <div className="mt-4 flex items-center justify-center text-sm text-muted-foreground">
                       <CircleHelp className="h-4 w-4 mr-1" />
-                      <span>Your presentation will be analyzed slide by slide with AI</span>
+                      <span>Analyzed slide by slide against current literature</span>
                     </div>
                   </div>
                 )}
               </>
             )}
+          </div>
+        </div>
+      </section>
+
+      {/* Conversion band */}
+      <section className="pb-20">
+        <div className="container mx-auto px-4">
+          <div className="max-w-4xl mx-auto">
+            <JoinFoundingMembers source="landing" />
           </div>
         </div>
       </section>

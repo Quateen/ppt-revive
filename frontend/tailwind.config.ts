@@ -46,6 +46,10 @@ export default {
 					DEFAULT: 'hsl(var(--accent))',
 					foreground: 'hsl(var(--accent-foreground))'
 				},
+				info: {
+					DEFAULT: 'hsl(var(--info))',
+					foreground: 'hsl(var(--info-foreground))'
+				},
 				popover: {
 					DEFAULT: 'hsl(var(--popover))',
 					foreground: 'hsl(var(--popover-foreground))'
@@ -64,18 +68,24 @@ export default {
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
 				},
+				// Nucleus Digitalis deep-teal ramp. Kept under the legacy "medical"
+				// key so existing medical-* class usages inherit the ND brand color.
 				medical: {
-					50: '#F0F7FF',
-					100: '#E0EFFF',
-					200: '#B9DAFF',
-					300: '#8FC4FF',
-					400: '#5AA6FF',
-					500: '#3182CE',
-					600: '#2563EB',
-					700: '#1D4ED8',
-					800: '#1E40AF',
-					900: '#1E3A8A',
+					50: '#e9f2f2',
+					100: '#c9e0e1',
+					200: '#9fc9cb',
+					300: '#6fadb1',
+					400: '#3d8f95',
+					500: '#127b81',
+					600: '#01696f',
+					700: '#0c4e54',
+					800: '#0d3f44',
+					900: '#0b3034',
 				}
+			},
+			fontFamily: {
+				sans: ['General Sans', 'Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+				display: ['Zodiak', 'Georgia', 'ui-serif', 'serif'],
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
